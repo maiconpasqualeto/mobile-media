@@ -14,6 +14,7 @@ import java.net.URLConnection;
 
 import android.app.Activity;
 import android.graphics.PixelFormat;
+import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnBufferingUpdateListener;
 import android.media.MediaPlayer.OnCompletionListener;
@@ -45,7 +46,6 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     private Button mPause;
     private Button mReset;
     private Button mStop;
-    private String current;
 
     /**
      * Called when the activity is first created.
@@ -53,12 +53,12 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     public void onCreate(Bundle icicle) {
         super.onCreate(icicle);
 
-        setContentView(R.layout.player);
+        setContentView(R.layout.player_full);
 
         // Set up the play/pause/reset/stop buttons
-        mPreview = (SurfaceView) findViewById(R.id.surface);
+        
         //mPath = (EditText) findViewById(R.id.path);
-        mPlay = (Button) findViewById(R.id.play);
+        /*mPlay = (Button) findViewById(R.id.play);
         mPause = (Button) findViewById(R.id.pause);
         mReset = (Button) findViewById(R.id.reset);
         mStop = (Button) findViewById(R.id.stop);
@@ -89,63 +89,65 @@ public class PlayerActivity extends Activity implements OnErrorListener,
                     mp.release();
                 }
             }
-        });
+        });*/
 
         // Set the transparency
         getWindow().setFormat(PixelFormat.TRANSPARENT);
 
+        mPreview = (SurfaceView) findViewById(R.id.newSurface);
         // Set a size for the video screen
         holder = mPreview.getHolder();
         holder.addCallback(this);
+        // Não tirar essa linha, resolve o problema do erro (1, -38)
         holder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
-        holder.setFixedSize(65, 50);
         
+        //holder.setFixedSize(65, 50);
+        
+        // Create a new media player and set the listeners
+        mp = new MediaPlayer();
+        mp.setOnErrorListener(this);
+        mp.setOnBufferingUpdateListener(this);
+        mp.setOnCompletionListener(this);
+        mp.setOnPreparedListener(this);
+        mp.setAudioStreamType(AudioManager.STREAM_MUSIC);  
+        // Set the surface for the video output
+        mp.setDisplay(holder);
+        
+        // Preparar o arquivo
+        FilenameFilter ff = new FilenameFilter() {
+			@Override
+			public boolean accept(File dir, String filename) {
+				return filename.endsWith(".3gp");
+			}
+		};
+		File arq = extStore.listFiles(ff)[0];
+    	for (String f : extStore.list(ff))
+    		Log.v(TAG, "file: " + f);
+        final String path = extStore + "/" + arq.getName();//mPath.getText().toString();
+        Log.v(TAG, "path: " + path);
+        Log.v(TAG, "extStore: " + extStore);
+        
+        try {
+        	//setDataSource(path);
+        	mp.setDataSource(path);
+        } catch (IOException ex) {
+        	Log.e(TAG, "error: " + ex.getMessage(), ex);
+            if (mp != null) {
+                mp.release();
+            }
+        }
     }
 
     private void playVideo() {
         try {
-        	
-        	FilenameFilter ff = new FilenameFilter() {
-				@Override
-				public boolean accept(File dir, String filename) {
-					return filename.endsWith(".mp4");
-				}
-			};
-			File arq = extStore.listFiles(ff)[0];
-        	for (String f : extStore.list(ff))
-        		Log.v(TAG, "file: " + f);
-            final String path = extStore + "/" + arq.getName();//mPath.getText().toString();
-            Log.v(TAG, "path: " + path);
-            Log.v(TAG, "extStore: " + extStore);
 
-            // If the path has not changed, just start the media player
-            if (path.equals(current) && mp != null) {
-                mp.start();
-                return;
-            }
-            current = path;
-
-            // Create a new media player and set the listeners
-            mp = new MediaPlayer();
-            mp.setOnErrorListener(this);
-            mp.setOnBufferingUpdateListener(this);
-            mp.setOnCompletionListener(this);
-            mp.setOnPreparedListener(this);
-            mp.setAudioStreamType(2);
-
-            // Set the surface for the video output
-            mp.setDisplay(mPreview.getHolder());
-
-            // Set the data source in another thread
-            // which actually downloads the mp3 or videos
-            // to a temporary location
             Runnable r = new Runnable() {
                 public void run() {
                     try {
-                        setDataSource(path);
+                       
                         mp.prepare();
                         Log.v(TAG, "Duration:  ===>" + mp.getDuration());
-                        mp.start();
+                        
                     } catch (IOException e) {
                         Log.e(TAG, e.getMessage(), e);
                     }
@@ -155,7 +157,7 @@ public class PlayerActivity extends Activity implements OnErrorListener,
         } catch (Exception e) {
             Log.e(TAG, "error: " + e.getMessage(), e);
             if (mp != null) {
-                mp.stop();
+                //mp.stop();
                 mp.release();
             }
         }
@@ -203,7 +205,6 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     public boolean onError(MediaPlayer mediaPlayer, int what, int extra) {
         Log.e(TAG, "onError--->   what:" + what + "    extra:" + extra);
         if (mediaPlayer != null) {
-            mediaPlayer.stop();
             mediaPlayer.release();
         }
         return false;
@@ -215,14 +216,19 @@ public class PlayerActivity extends Activity implements OnErrorListener,
 
     public void onCompletion(MediaPlayer arg0) {
         Log.d(TAG, "onCompletion called");
+        mp.start();
     }
 
     public void onPrepared(MediaPlayer mediaplayer) {
         Log.d(TAG, "onPrepared called");
+        mPreview.requestFocus();
+        mp.start();
+        
     }
 
     public void surfaceCreated(SurfaceHolder surfaceholder) {
         Log.d(TAG, "surfaceCreated called");
+        playVideo();
     }
 
     public void surfaceChanged(SurfaceHolder surfaceholder, int i, int j, int k) {
@@ -231,5 +237,7 @@ public class PlayerActivity extends Activity implements OnErrorListener,
 
     public void surfaceDestroyed(SurfaceHolder surfaceholder) {
         Log.d(TAG, "surfaceDestroyed called");
+        mp.release();
+        mp = null;
     }
 }
