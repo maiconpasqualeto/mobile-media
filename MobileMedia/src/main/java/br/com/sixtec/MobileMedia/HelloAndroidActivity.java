@@ -11,6 +11,7 @@ import android.net.wifi.ScanResult;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.text.format.Formatter;
 import android.util.Log;
 import android.view.View;
@@ -21,9 +22,6 @@ import br.com.sixtec.webservice.Conexao;
 public class HelloAndroidActivity extends Activity {
 
     private static String TAG = "MobileMedia";
-    private BroadcastReceiver receiverScan;
-    private BroadcastReceiver receiverStateChanged;
-    private BroadcastReceiver receiverSuplicateChanged;
     
     private BroadcastReceiver receiver;
     
@@ -38,6 +36,9 @@ public class HelloAndroidActivity extends Activity {
     
     boolean receiverRegistrado = false;
     
+    private String serial = "sem serial"; 
+    
+    
     /**
      * Called when the activity is first created.
      * @param savedInstanceState If the activity is being re-initialized after 
@@ -50,15 +51,15 @@ public class HelloAndroidActivity extends Activity {
 		
         setContentView(R.layout.main);
         
-        Button txtConexao = (Button) findViewById(R.id.btnTeste);
-        txtConexao.setOnClickListener(new OnClickListener() {			
+        Button btnConexao = (Button) findViewById(R.id.btnTeste);
+        btnConexao.setOnClickListener(new OnClickListener() {			
 			@Override
 			public void onClick(View v) {
 				Thread t = new Thread(new Runnable() {					
 					@Override
 					public void run() {
 						Conexao c = new Conexao();
-						c.lerUmaPessoa();
+						c.lerUmCarro();
 					}
 				});
 				t.start();
@@ -93,11 +94,12 @@ public class HelloAndroidActivity extends Activity {
         // Cria variável Wifi local
         wifi = (WifiManager) getSystemService(Context.WIFI_SERVICE);
         
-        //registraAlteracaoStatusWifi();
-        //registraAlteracaoStatusWifiSuplicate();
         receivers();
+
+        serial = Settings.System.getString(getContentResolver(),
+            Settings.System.ANDROID_ID);
         
-        
+        Log.v(TAG, "Device Serial: " + serial);
     }
     
     /**
@@ -219,7 +221,15 @@ public class HelloAndroidActivity extends Activity {
 	
 	@Override
 	protected void onRestart() {
-		super.onResume();
+		super.onRestart();
+				
+		Log.d(TAG, "onRestart");
+	}
+	
+	@Override
+	protected void onStart() {
+		super.onStart();
+		
 		if (!receiverRegistrado) {
 			IntentFilter f = new IntentFilter();
 			f.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
@@ -232,15 +242,6 @@ public class HelloAndroidActivity extends Activity {
 		
 		wifi.startScan();
 		
-		Log.d(TAG, "onRestart");
-	}
-	
-	@Override
-	protected void onStart() {
-		super.onStart();
-		
-		conectarWifi();
-		
 		Log.d(TAG, "onStart");
 	}
 	
@@ -249,6 +250,7 @@ public class HelloAndroidActivity extends Activity {
 		super.onPause();
 		if (receiverRegistrado) {
 			unregisterReceiver(receiver);
+			receiverRegistrado = false;
 		}
 		
 		Log.d(TAG, "onPause");

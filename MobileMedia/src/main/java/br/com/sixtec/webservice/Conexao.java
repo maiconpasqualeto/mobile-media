@@ -63,20 +63,20 @@ public class Conexao {
 		return retorno;
 	}
 
-	public void lerUmaPessoa() {
-		//String result = getREST("http://192.168.20.129:8080/WebMedia/rest");
-		String result = getREST("http://10.1.1.100:8080/WebMedia/rest");
+	public void lerUmCarro() {
+		String result = getREST("http://192.168.20.215:8080/WebMedia/restfull/sample/do-something");
+		//String result = getREST("http://10.1.1.100:8080/WebMedia/rest");
 		if (result == null) {
 			Log.e("NGVL", "Falha ao acessar WS");
 			return;
 		}
 
 		try {
-			JSONObject pessoaJson = new JSONObject(result);
+			JSONObject carro = new JSONObject(result);
 
-			Log.i("NGVL", "id=" + pessoaJson.getInt("id"));
-			Log.i("NGVL", "nome=" + pessoaJson.getString("nome"));
-
+			Log.i("NGVL", "id=" + carro.getInt("id"));
+			Log.i("NGVL", "nome=" + carro.getString("nome"));
+			
 		} catch (JSONException e) {
 			Log.e("NGVL", "Erro ao fazer parsing do JSON", e);
 		}
