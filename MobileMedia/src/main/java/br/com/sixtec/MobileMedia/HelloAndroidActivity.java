@@ -2,6 +2,10 @@ package br.com.sixtec.MobileMedia;
 
 import java.util.List;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -17,7 +21,7 @@ import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
-import br.com.sixtec.webservice.Conexao;
+import br.com.sixtec.MobileMedia.facade.MobileFacade;
 
 public class HelloAndroidActivity extends Activity {
 
@@ -38,6 +42,8 @@ public class HelloAndroidActivity extends Activity {
     
     private String serial = "sem serial"; 
     
+    private JSONArray jsonMidias;
+    
     
     /**
      * Called when the activity is first created.
@@ -55,14 +61,7 @@ public class HelloAndroidActivity extends Activity {
         btnConexao.setOnClickListener(new OnClickListener() {			
 			@Override
 			public void onClick(View v) {
-				Thread t = new Thread(new Runnable() {					
-					@Override
-					public void run() {
-						Conexao c = new Conexao();
-						c.lerUmCarro();
-					}
-				});
-				t.start();
+				registrarBoard();
 			}
 		});
         
@@ -90,6 +89,14 @@ public class HelloAndroidActivity extends Activity {
 			}			
         });
         
+        Button btnDownloadMidia = (Button) findViewById(R.id.btnDownloadMidia);
+        btnDownloadMidia.setOnClickListener(new OnClickListener() {			
+			@Override
+			public void onClick(View v) {
+				downloadDasMidias();
+			}			
+        });
+        
         
         // Cria variável Wifi local
         wifi = (WifiManager) getSystemService(Context.WIFI_SERVICE);
@@ -100,6 +107,38 @@ public class HelloAndroidActivity extends Activity {
             Settings.System.ANDROID_ID);
         
         Log.v(TAG, "Device Serial: " + serial);
+    }
+    
+    private void registrarBoard() {
+    	new Thread(new Runnable() {
+			@Override
+			public void run() {				
+				jsonMidias = MobileFacade.getInstance().registraBoard(serial);
+			}
+		}).start();
+		
+	}
+    
+    private void downloadDasMidias(){
+    	
+    	for (int i=0; i<jsonMidias.length(); i++) {
+    		try {
+				JSONObject o = jsonMidias.getJSONObject(i);
+				final String idMidia = o.getString("id");
+				final String nomeArquivo = o.getString("nomeArquivo");
+				
+		    	new Thread(new Runnable() {
+					@Override
+					public void run() {
+						MobileFacade.getInstance().downloadMidia(idMidia, nomeArquivo);
+					}
+				}).start();
+		    	
+    		} catch (JSONException e) {
+    			Log.e(TAG, "Erro no dowload de midias", e);
+    		}
+    	}
+    	
     }
     
     /**

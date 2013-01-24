@@ -4,7 +4,6 @@
 package br.com.sixtec.MobileMedia;
 
 import java.io.File;
-import java.io.FileFilter;
 import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
@@ -24,7 +23,6 @@ import android.os.Environment;
 import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
-import android.view.View;
 import android.webkit.URLUtil;
 import android.widget.Button;
 /**

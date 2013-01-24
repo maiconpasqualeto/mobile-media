@@ -18,6 +18,12 @@
     android:text="Testar Conexao" />
 
 <Button
+    android:id="@+id/btnDownloadMidia"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:text="Downlaod Midia" />
+
+<Button
     android:id="@+id/btnDesconectar"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
