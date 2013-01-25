@@ -5,6 +5,8 @@ package br.com.sixtec.MobileMedia;
 
 import java.io.File;
 
+import br.com.sixtec.MobileMedia.utils.MobileMediaHelper;
+
 import android.app.Activity;
 import android.os.Bundle;
 import android.os.Environment;
@@ -25,8 +27,7 @@ public class NewPlayerActivity extends Activity {
 		setContentView(R.layout.new_player);
 		final VideoView vv = (VideoView) findViewById(R.newPlayer.videoView);
 				
-		File sd = Environment.getExternalStorageDirectory();
-		File arq = new File(sd.getPath() + "/JAC.mp4");
+		File arq = new File(MobileMediaHelper.DIRETORIO_MIDIAS + "JAC.mp4");
 		MediaController mc = new MediaController(NewPlayerActivity.this);
 		vv.setMediaController(mc);
 		vv.setVideoPath(arq.getPath());

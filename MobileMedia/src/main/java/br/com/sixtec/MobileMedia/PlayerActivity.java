@@ -13,6 +13,8 @@ import java.net.URLConnection;
 import java.util.Arrays;
 import java.util.List;
 
+import br.com.sixtec.MobileMedia.utils.MobileMediaHelper;
+
 import android.app.Activity;
 import android.graphics.PixelFormat;
 import android.media.AudioManager;
@@ -39,8 +41,8 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     private static final String TAG = "MobileMedia";
     
     
-    private final File extDir = Environment.getExternalStorageDirectory();
-    private final String path = extDir.getPath() + "/";
+    //private final File extDir = Environment.getExternalStorageDirectory();
+    //private final String path = extDir.getPath() + "/";
 
     private MediaPlayer mp;
     private SurfaceView mPreview;
@@ -52,7 +54,7 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     private Button mStop;
     
     private List<String> arquivos;
-    private int indexArquivo = -1;  
+    private int indexArquivo; 
     //private String pathCompleto;
     
 
@@ -126,11 +128,11 @@ public class PlayerActivity extends Activity implements OnErrorListener,
         FilenameFilter fileFilter = new FilenameFilter() {
 			@Override
 			public boolean accept(File dir, String filename) {
-				return filename.endsWith(".3gp");
+				return filename.endsWith(MobileMediaHelper.EXTENSAO_ARQUIVO_MIDIA);
 			}
 		};
-		//File arq = extStore.listFiles(fileFilter)[0];
-		arquivos = Arrays.asList(extDir.list(fileFilter));
+		File midiasDir = new File(MobileMediaHelper.DIRETORIO_MIDIAS);
+		arquivos = Arrays.asList(midiasDir.list(fileFilter));
 		if (arquivos.isEmpty()){
 			Log.e(TAG, "Não existem midias para execução");
 			// TODO [Maicon] - criar um playlist padrao.
@@ -141,22 +143,24 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     	for (String nomeArq : arquivos)
     		Log.v(TAG, "file: " + nomeArq);
     	
-    	defineArquivoParaExecucao();
+    	indexArquivo = -1;
+    	
+    	defineArquivoParaExecucao(mp);
     }
     
-    private void defineArquivoParaExecucao() {
+    private void defineArquivoParaExecucao(MediaPlayer mediaPlayer) {
     	try {
     		if( (++indexArquivo) == arquivos.size() )
     			indexArquivo = 0;
     		
-        	String pathCompleto = path + arquivos.get(indexArquivo);
+        	String arqMidia = MobileMediaHelper.DIRETORIO_MIDIAS + arquivos.get(indexArquivo);
         	
         	//setDataSource(path);
-        	mp.setDataSource(pathCompleto);
+        	mediaPlayer.setDataSource(arqMidia);
         } catch (IOException ex) {
         	Log.e(TAG, "error: " + ex.getMessage(), ex);
-            if (mp != null) {
-                mp.release();
+            if (mediaPlayer != null) {
+            	mediaPlayer.release();
             }
         }
     }
@@ -237,11 +241,11 @@ public class PlayerActivity extends Activity implements OnErrorListener,
         Log.d(TAG, "onBufferingUpdate called --->   percent:" + percent);
     }
 
-    public void onCompletion(MediaPlayer arg0) {
+    public void onCompletion(MediaPlayer mediaPlayer) {
         Log.d(TAG, "onCompletion called");
-        mp.stop();
-        mp.reset();
-        defineArquivoParaExecucao();
+        mediaPlayer.stop();
+    	mediaPlayer.reset();
+        defineArquivoParaExecucao(mediaPlayer);
         prepareToPlay();
         //mp.start();
     }
@@ -250,7 +254,7 @@ public class PlayerActivity extends Activity implements OnErrorListener,
         Log.d(TAG, "onPrepared called");
         // play
         mPreview.requestFocus();
-        mp.start();        
+        mediaplayer.start();
     }
 
     public void surfaceCreated(SurfaceHolder surfaceholder) {

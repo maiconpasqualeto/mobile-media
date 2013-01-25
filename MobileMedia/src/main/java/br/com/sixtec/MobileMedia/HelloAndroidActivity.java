@@ -21,7 +21,9 @@ import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
+import android.widget.Toast;
 import br.com.sixtec.MobileMedia.facade.MobileFacade;
+import br.com.sixtec.MobileMedia.service.ConexaoService;
 
 public class HelloAndroidActivity extends Activity {
 
@@ -58,13 +60,21 @@ public class HelloAndroidActivity extends Activity {
 		
         setContentView(R.layout.main);
         
-        Button btnConexao = (Button) findViewById(R.id.btnTeste);
+       /*Button btnConexao = (Button) findViewById(R.id.btnTeste);
         btnConexao.setOnClickListener(new OnClickListener() {			
 			@Override
 			public void onClick(View v) {
 				registrarBoard();
 			}
 		});
+        
+        Button btnCriarRede = (Button) findViewById(R.id.btnCriarRede);
+        btnCriarRede.setOnClickListener(new OnClickListener() {			
+			@Override
+			public void onClick(View v) {
+				conectarWifi();
+			}			
+        });*/
         
         Button btnPlayer = (Button) findViewById(R.id.btnPlayer);
         btnPlayer.setOnClickListener(new OnClickListener() {			
@@ -74,13 +84,7 @@ public class HelloAndroidActivity extends Activity {
 			}
         });
         
-        Button btnCriarRede = (Button) findViewById(R.id.btnCriarRede);
-        btnCriarRede.setOnClickListener(new OnClickListener() {			
-			@Override
-			public void onClick(View v) {
-				conectarWifi();
-			}			
-        });
+        
         
         Button btnDesconectar = (Button) findViewById(R.id.btnDesconectar);
         btnDesconectar.setOnClickListener(new OnClickListener() {			
@@ -108,6 +112,9 @@ public class HelloAndroidActivity extends Activity {
             Settings.System.ANDROID_ID);
         
         Log.v(TAG, "Device Serial: " + serial);
+        
+        
+        registrarBoard();
     }
     
     private void registrarBoard() {
@@ -121,27 +128,32 @@ public class HelloAndroidActivity extends Activity {
 	}
     
     private void downloadDasMidias(){
-    	
-    	for (int i=0; i<jsonMidias.length(); i++) {
-    		try {
-				JSONObject o = jsonMidias.getJSONObject(i);
-				final String idMidia = o.getString("id");
-				final String nomeArquivo = o.getString("nomeArquivo");
-				
-		    	new Thread(new Runnable() {
-					@Override
-					public void run() {
-						MobileFacade.getInstance().downloadMidia(idMidia, nomeArquivo);
+    	/*new Thread(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					jsonMidias = MobileFacade.getInstance().registraBoard(serial, identificador);
+										
+					for (int i=0; i<jsonMidias.length(); i++) {
+						JSONObject o = jsonMidias.getJSONObject(i);
+						final String idMidia = o.getString("id");
+						final String nomeArquivo = o.getString("nomeArquivo");
+						MobileFacade.getInstance().downloadMidia(idMidia, nomeArquivo);						
 					}
-				}).start();
-		    	
-    		} catch (JSONException e) {
-    			Log.e(TAG, "Erro no dowload de midias", e);
-    		}
-    	}
-    	
-    	
-    	
+					
+					MobileFacade.getInstance().moveArquivosPlaylist();
+					
+					Toast.makeText(HelloAndroidActivity.this, "Dowload concluído.", Toast.LENGTH_LONG).show();
+					
+				} catch (JSONException e) {
+					Log.e(TAG, "Erro no dowload de midias", e);
+				}
+			}
+		}).start();*/
+    	Intent it = new Intent(this, ConexaoService.class);
+    	it.putExtra("serial", serial);
+    	it.putExtra("identificador", identificador);
+    	startService(it);
     }
     
     /**

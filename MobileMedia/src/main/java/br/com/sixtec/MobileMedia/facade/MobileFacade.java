@@ -5,14 +5,15 @@ package br.com.sixtec.MobileMedia.facade;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FilenameFilter;
 import java.io.IOException;
 
 import org.apache.http.message.BasicNameValuePair;
 import org.json.JSONArray;
 import org.json.JSONException;
 
-import android.os.Environment;
 import android.util.Log;
+import br.com.sixtec.MobileMedia.utils.MobileMediaHelper;
 import br.com.sixtec.MobileMedia.webservice.ConexaoRest;
 
 /**
@@ -49,22 +50,25 @@ public class MobileFacade {
 		}
 		FileOutputStream fos = null;
 		try {
-		
-			String path = Environment.getExternalStorageDirectory() + "/tmp/";
-			File dir = new File(path);
+			
+			String tempPath = MobileMediaHelper.DIRETORIO_TEMPORARIO;
+			File dir = new File(tempPath);
 			if (!dir.exists())
 				dir.mkdir();
 			
-			File arquivo = new File(path + nomeArquivo);
+			File arquivo = new File(tempPath + nomeArquivo);
 			fos = new FileOutputStream(arquivo);
 			fos.write(b);
 			fos.flush();
+			
+			Log.d(TAG, "Feito Download da Midia: " + arquivo.getPath() + "/" + arquivo.getName());
 			
 		} catch (IOException e) {
 			Log.e(TAG, "Erro ao gravar arquivo de midia");
 		} finally {
 			try { 
-				fos.close();
+				if (fos != null)
+					fos.close();
 			} catch (IOException e) {
 				Log.e(TAG, "Erro ao gravar arquivo de midia");
 			}
@@ -80,6 +84,11 @@ public class MobileFacade {
 		JSONArray arr = null;
 		
 		byte[] b = conn.postREST(nomeRest, p1, p2);
+		if (b == null) {
+			arr = new JSONArray();
+			return arr;
+		}
+		
 		String result = new String(b);
 				
 		try {
@@ -92,6 +101,28 @@ public class MobileFacade {
 	}
 	
 	public void moveArquivosPlaylist(){
+		FilenameFilter fnf = new FilenameFilter() {
+			@Override
+			public boolean accept(File dir, String filename) {
+				return filename.endsWith(MobileMediaHelper.EXTENSAO_ARQUIVO_MIDIA);
+			}
+		};
+		// apaga as midias atuais
+		File dirMidias =  new File(MobileMediaHelper.DIRETORIO_MIDIAS);
+		File[] arsMidia = dirMidias.listFiles(fnf);
+		for (int i=0; i<arsMidia.length; i++){
+			File arq = arsMidia[i];
+			Log.d(TAG, "Arquivo deletado: " + arq.getPath() + "/" + arq.getName());
+			arq.delete();
+		}
+		
+		// copia as midias baixadas
+		File dirTemp = new File(MobileMediaHelper.DIRETORIO_TEMPORARIO);
+		File[] arqsTemp = dirTemp.listFiles(fnf);
+		for (int i=0; i<arqsTemp.length; i++){
+			File arq = arqsTemp[i];			
+			MobileMediaHelper.moveFile(arq, dirMidias);
+		}
 		
 	}
 	
