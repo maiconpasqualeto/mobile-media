@@ -10,6 +10,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.Arrays;
+import java.util.List;
 
 import android.app.Activity;
 import android.graphics.PixelFormat;
@@ -25,6 +27,7 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.webkit.URLUtil;
 import android.widget.Button;
+import android.widget.Toast;
 /**
  * @author maicon
  *
@@ -32,9 +35,12 @@ import android.widget.Button;
 public class PlayerActivity extends Activity implements OnErrorListener,
         OnBufferingUpdateListener, OnCompletionListener,
         MediaPlayer.OnPreparedListener, SurfaceHolder.Callback {
-    private static final String TAG = "VideoPlayer";
+	
+    private static final String TAG = "MobileMedia";
     
-    private final File extStore = Environment.getExternalStorageDirectory();
+    
+    private final File extDir = Environment.getExternalStorageDirectory();
+    private final String path = extDir.getPath() + "/";
 
     private MediaPlayer mp;
     private SurfaceView mPreview;
@@ -44,6 +50,11 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     private Button mPause;
     private Button mReset;
     private Button mStop;
+    
+    private List<String> arquivos;
+    private int indexArquivo = -1;  
+    //private String pathCompleto;
+    
 
     /**
      * Called when the activity is first created.
@@ -112,22 +123,36 @@ public class PlayerActivity extends Activity implements OnErrorListener,
         mp.setDisplay(holder);
         
         // Preparar o arquivo
-        FilenameFilter ff = new FilenameFilter() {
+        FilenameFilter fileFilter = new FilenameFilter() {
 			@Override
 			public boolean accept(File dir, String filename) {
 				return filename.endsWith(".3gp");
 			}
 		};
-		File arq = extStore.listFiles(ff)[0];
-    	for (String f : extStore.list(ff))
-    		Log.v(TAG, "file: " + f);
-        final String path = extStore + "/" + arq.getName();//mPath.getText().toString();
-        Log.v(TAG, "path: " + path);
-        Log.v(TAG, "extStore: " + extStore);
-        
-        try {
+		//File arq = extStore.listFiles(fileFilter)[0];
+		arquivos = Arrays.asList(extDir.list(fileFilter));
+		if (arquivos.isEmpty()){
+			Log.e(TAG, "Não existem midias para execução");
+			// TODO [Maicon] - criar um playlist padrao.
+			Toast.makeText(this, "Não existem midias para execução", Toast.LENGTH_SHORT).show();
+			finish();
+		}
+		
+    	for (String nomeArq : arquivos)
+    		Log.v(TAG, "file: " + nomeArq);
+    	
+    	defineArquivoParaExecucao();
+    }
+    
+    private void defineArquivoParaExecucao() {
+    	try {
+    		if( (++indexArquivo) == arquivos.size() )
+    			indexArquivo = 0;
+    		
+        	String pathCompleto = path + arquivos.get(indexArquivo);
+        	
         	//setDataSource(path);
-        	mp.setDataSource(path);
+        	mp.setDataSource(pathCompleto);
         } catch (IOException ex) {
         	Log.e(TAG, "error: " + ex.getMessage(), ex);
             if (mp != null) {
@@ -136,7 +161,7 @@ public class PlayerActivity extends Activity implements OnErrorListener,
         }
     }
 
-    private void playVideo() {
+    private void prepareToPlay() {
         try {
 
             Runnable r = new Runnable() {
@@ -144,7 +169,7 @@ public class PlayerActivity extends Activity implements OnErrorListener,
                     try {
                        
                         mp.prepare();
-                        Log.v(TAG, "Duration:  ===>" + mp.getDuration());
+                        //Log.v(TAG, "Duration:  ===>" + mp.getDuration());
                         
                     } catch (IOException e) {
                         Log.e(TAG, e.getMessage(), e);
@@ -179,7 +204,7 @@ public class PlayerActivity extends Activity implements OnErrorListener,
             InputStream stream = cn.getInputStream();
             if (stream == null)
                 throw new RuntimeException("stream is null");
-            File temp = File.createTempFile(extStore.getName() + "/mediaplayertmp", "dat");
+            File temp = File.createTempFile(path + "/mediaplayertmp", "dat");
             String tempPath = temp.getAbsolutePath();
             FileOutputStream out = new FileOutputStream(temp);
             byte buf[] = new byte[128];
@@ -214,19 +239,23 @@ public class PlayerActivity extends Activity implements OnErrorListener,
 
     public void onCompletion(MediaPlayer arg0) {
         Log.d(TAG, "onCompletion called");
-        mp.start();
+        mp.stop();
+        mp.reset();
+        defineArquivoParaExecucao();
+        prepareToPlay();
+        //mp.start();
     }
 
     public void onPrepared(MediaPlayer mediaplayer) {
         Log.d(TAG, "onPrepared called");
+        // play
         mPreview.requestFocus();
-        mp.start();
-        
+        mp.start();        
     }
 
     public void surfaceCreated(SurfaceHolder surfaceholder) {
         Log.d(TAG, "surfaceCreated called");
-        playVideo();
+        prepareToPlay();
     }
 
     public void surfaceChanged(SurfaceHolder surfaceholder, int i, int j, int k) {

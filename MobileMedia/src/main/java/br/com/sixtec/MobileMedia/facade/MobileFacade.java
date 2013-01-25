@@ -50,8 +50,12 @@ public class MobileFacade {
 		FileOutputStream fos = null;
 		try {
 		
-			String path = Environment.getExternalStorageDirectory() + "/" + nomeArquivo;
-			File arquivo = new File(path);
+			String path = Environment.getExternalStorageDirectory() + "/tmp/";
+			File dir = new File(path);
+			if (!dir.exists())
+				dir.mkdir();
+			
+			File arquivo = new File(path + nomeArquivo);
 			fos = new FileOutputStream(arquivo);
 			fos.write(b);
 			fos.flush();
@@ -68,13 +72,14 @@ public class MobileFacade {
 		
 	}
 	
-	public JSONArray registraBoard(String boardSerial) {
+	public JSONArray registraBoard(String boardSerial, String identificador) {
 		String nomeRest = "board/registraboard";
-		BasicNameValuePair p = new BasicNameValuePair("boardSerial", boardSerial);
+		BasicNameValuePair p1 = new BasicNameValuePair("boardSerial", boardSerial);
+		BasicNameValuePair p2 = new BasicNameValuePair("identificador", identificador);
 		
 		JSONArray arr = null;
 		
-		byte[] b = conn.postREST(nomeRest, p);
+		byte[] b = conn.postREST(nomeRest, p1, p2);
 		String result = new String(b);
 				
 		try {
@@ -84,6 +89,10 @@ public class MobileFacade {
 			Log.e(TAG, "Erro ao fazer parsing do JSON", e);
 		}
 		return arr;
+	}
+	
+	public void moveArquivosPlaylist(){
+		
 	}
 	
 }

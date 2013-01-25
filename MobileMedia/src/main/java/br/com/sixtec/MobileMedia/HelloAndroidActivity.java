@@ -40,7 +40,8 @@ public class HelloAndroidActivity extends Activity {
     
     boolean receiverRegistrado = false;
     
-    private String serial = "sem serial"; 
+    private String serial = "sem serial";
+    private String identificador = "emulador";
     
     private JSONArray jsonMidias;
     
@@ -113,7 +114,7 @@ public class HelloAndroidActivity extends Activity {
     	new Thread(new Runnable() {
 			@Override
 			public void run() {				
-				jsonMidias = MobileFacade.getInstance().registraBoard(serial);
+				jsonMidias = MobileFacade.getInstance().registraBoard(serial, identificador);
 			}
 		}).start();
 		
@@ -138,6 +139,8 @@ public class HelloAndroidActivity extends Activity {
     			Log.e(TAG, "Erro no dowload de midias", e);
     		}
     	}
+    	
+    	
     	
     }
     
