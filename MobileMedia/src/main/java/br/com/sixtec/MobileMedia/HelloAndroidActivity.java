@@ -3,16 +3,16 @@ package br.com.sixtec.MobileMedia;
 import java.util.List;
 
 import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.net.NetworkInfo.DetailedState;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiConfiguration;
+import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -21,9 +21,11 @@ import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
-import android.widget.Toast;
 import br.com.sixtec.MobileMedia.facade.MobileFacade;
+import br.com.sixtec.MobileMedia.persistencia.MMConfiguracao;
+import br.com.sixtec.MobileMedia.persistencia.MobileMediaDAO;
 import br.com.sixtec.MobileMedia.service.ConexaoService;
+import br.com.sixtec.MobileMedia.utils.MobileMediaHelper;
 
 public class HelloAndroidActivity extends Activity {
 
@@ -32,21 +34,19 @@ public class HelloAndroidActivity extends Activity {
     private BroadcastReceiver receiver;
     
     private WifiManager wifi;
-    //private static final String SSID_REDE = "Ma & Ma";
+    private String ssidRede = null;
+    private String passRede = null;
     //private static final String PASS_REDE = "a0b1c2d3e4";
     
-    private static final String SSID_REDE = "Nastek_Andar2A";
-    private static final String PASS_REDE = "abcdef2405";
+    //private static final String SSID_REDE = "Nastek_Andar2A";
+    //private static final String PASS_REDE = "abcdef2405";
         
-    private static final WifiType WIFI_TYPE = WifiType.WPA_PSK;
+    //private static final WifiType WIFI_TYPE = WifiType.WPA_PSK;
     
     boolean receiverRegistrado = false;
     
     private String serial = "sem serial";
-    private String identificador = "emulador";
-    
-    private JSONArray jsonMidias;
-    
+    private String identificador = "tabra";
     
     /**
      * Called when the activity is first created.
@@ -102,31 +102,76 @@ public class HelloAndroidActivity extends Activity {
 			}			
         });
         
-        
-        // Cria variável Wifi local
-        wifi = (WifiManager) getSystemService(Context.WIFI_SERVICE);
-        
-        receivers();
+        MobileMediaDAO dao = MobileMediaDAO.getInstance(this);
+        MMConfiguracao conf = dao.buscaConfiguracao();
+        ssidRede = conf.getSsid();
+        passRede = conf.getPass();
 
         serial = Settings.System.getString(getContentResolver(),
             Settings.System.ANDROID_ID);
         
         Log.v(TAG, "Device Serial: " + serial);
         
+        // Cria variável Wifi local
+        wifi = (WifiManager) getSystemService(Context.WIFI_SERVICE);
         
-        registrarBoard();
+        receivers();
+        
     }
     
-    private void registrarBoard() {
-    	new Thread(new Runnable() {
-			@Override
-			public void run() {				
-				jsonMidias = MobileFacade.getInstance().registraBoard(serial, identificador);
-			}
-		}).start();
-		
+    @Override
+	protected void onRestart() {
+		super.onRestart();
+				
+		Log.d(TAG, "onRestart");
 	}
+	
+	@Override
+	protected void onStart() {
+		super.onStart();
+		
+		if (!receiverRegistrado) {
+			IntentFilter f = new IntentFilter();
+			f.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
+			f.addAction(WifiManager.SUPPLICANT_STATE_CHANGED_ACTION);
+			f.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION);
+			
+			registerReceiver(receiver, f);
+			receiverRegistrado = true;
+		}
+		
+		if (!wifi.isWifiEnabled())
+			wifi.setWifiEnabled(true);
+		
+		//wifi.startScan();
+		
+		Log.d(TAG, "onStart");
+	}
+	
+	@Override
+	protected void onPause() {
+		super.onPause();
+		if (receiverRegistrado) {
+			unregisterReceiver(receiver);
+			receiverRegistrado = false;
+		}
+		
+		Log.d(TAG, "onPause");
+	}
+	
+    @Override
+    protected void onStop() {
+    	super.onStop();		
+		
+		Log.d(TAG, "onStop");
+    }
     
+    @Override
+    protected void onDestroy() {    	
+    	super.onDestroy();
+    	Log.d(TAG, "onDestroy");
+    }
+        
     private void downloadDasMidias(){
     	/*new Thread(new Runnable() {
 			@Override
@@ -176,51 +221,7 @@ public class HelloAndroidActivity extends Activity {
 		conectaRedeWifi();
     	
 	}
-	
-	public void conectaRedeWifi(){
-    	
-		for (WifiConfiguration r : wifi.getConfiguredNetworks()) {
-    		if (("\"" + SSID_REDE + "\"").equals(r.SSID)) {
-    			int id = r.networkId;
-    			wifi.enableNetwork(id, true);
-    			wifi.setWifiEnabled(true);
-    			Log.d(TAG, "A rede já existe, habilitou o Wifi");
-    			wifi.reconnect();
-    			wifi.reassociate();
-    			return;
-    		}    		
-    	}
 		
-		// se a rede não existe, cria uma nova rede
-		List<ScanResult> results = wifi.getScanResults();
-		
-        for (ScanResult r : results){
-        	if(SSID_REDE.equals(r.SSID)){
-        		
-        		Log.d(TAG, "Capabilities: " + r.capabilities);
-        		
-        		WifiConfiguration wc = new WifiConfiguration();
-        		
-        		wc.SSID = "\"" + r.SSID + "\"";
-        		wc.BSSID = r.BSSID;
-        		wc.priority = 100;
-        		
-        		configuraRedeWifi(wc, PASS_REDE);
-        		
-        		int id = wifi.addNetwork(wc);
-        		
-        		Log.d(TAG, "Wifi result ID:" + id);
-        		
-        		// a rede foi criada com sucesso
-        		if (id > -1) {
-	        		wifi.enableNetwork(id, true);
-	        		wifi.setWifiEnabled(true);
-	        		wifi.saveConfiguration();
-        		}		        		
-        	}
-        }
-	}
-	
 	public void receivers(){
 		if (receiver == null)
 			receiver = new BroadcastReceiver() {
@@ -241,7 +242,8 @@ public class HelloAndroidActivity extends Activity {
 								wifi.setWifiEnabled(true);
 								break;
 							case WifiManager.WIFI_STATE_ENABLED:
-								
+								//wifi.startScan();
+								conectaRedeWifi();
 								break;
 			        	}
 			        } else if (WifiManager.SUPPLICANT_STATE_CHANGED_ACTION.equals(intent.getAction())){
@@ -255,7 +257,7 @@ public class HelloAndroidActivity extends Activity {
 							conectaRedeWifi();
 							break;
 						case SCANNING:
-							conectaRedeWifi();
+							
 							break;
 						case COMPLETED:
 							
@@ -264,63 +266,109 @@ public class HelloAndroidActivity extends Activity {
 							break;
 						}
 			        } else if (WifiManager.NETWORK_STATE_CHANGED_ACTION.equals(intent.getAction())) {
-			        	
-				        Log.d("Network info: IP: ", Formatter.formatIpAddress(wifi.getConnectionInfo().getIpAddress()));
+				        
+						DetailedState ds = WifiInfo.getDetailedStateOf(wifi.getConnectionInfo().getSupplicantState());
+						Log.d(MobileMediaHelper.TAG, "Detailed Supplicant state: " + ds);
+						
+						Log.d(MobileMediaHelper.TAG, "Network info: IP: " + 
+				        		Formatter.formatIpAddress(wifi.getConnectionInfo().getIpAddress()));
+				        
+				        if (wifi.getConnectionInfo().getIpAddress() > 0){
+				        	downloadDasMidias();
+				        } 
 			        }
 				}
 		};
 		
 	}
 	
-	
-	@Override
-	protected void onRestart() {
-		super.onRestart();
-				
-		Log.d(TAG, "onRestart");
+	public void conectaRedeWifi(){
+    	
+		for (WifiConfiguration r : wifi.getConfiguredNetworks()) {
+    		if (("\"" + ssidRede + "\"").equals(r.SSID)) {
+    			int id = r.networkId;
+    			wifi.enableNetwork(id, true);
+    			//wifi.setWifiEnabled(true);
+    			Log.d(TAG, "A rede já existe, habilitou o Wifi");
+    			//wifi.reconnect();
+    			//wifi.reassociate();
+    			return;
+    		}    		
+    	}
+		
+		// se a rede não existe, cria uma nova rede
+		List<ScanResult> results = wifi.getScanResults();
+		
+        for (ScanResult r : results){
+        	if(ssidRede.equals(r.SSID)){
+        		
+        		WifiType wifiType = null;
+        		
+        		Log.d(TAG, "Capabilities: " + r.capabilities);
+        		if (r.capabilities.contains(WifiType.WEP.name()))
+        			wifiType = WifiType.WEP;
+        		else if (r.capabilities.contains(WifiType.WPA_PSK.name()))
+        			wifiType = WifiType.WPA_PSK;
+        		
+        		WifiConfiguration wc = new WifiConfiguration();
+        		
+        		wc.SSID = "\"" + r.SSID + "\"";
+        		wc.BSSID = r.BSSID;
+        		wc.priority = 100;
+        		
+        		configuraRedeWifi(wc, passRede, wifiType);
+        		
+        		int id = wifi.addNetwork(wc);
+        		
+        		Log.d(TAG, "Wifi result ID:" + id);
+        		
+        		// a rede foi criada com sucesso
+        		if (id > -1) {
+        			wifi.saveConfiguration();
+        			wifi.enableNetwork(id, true);
+	        		//wifi.setWifiEnabled(true);	        		
+        		}		        		
+        	}
+        }
 	}
-	
-	@Override
-	protected void onStart() {
-		super.onStart();
-		
-		if (!receiverRegistrado) {
-			IntentFilter f = new IntentFilter();
-			f.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
-			f.addAction(WifiManager.SUPPLICANT_STATE_CHANGED_ACTION);
-			f.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION);
-			
-			registerReceiver(receiver, f);
-			receiverRegistrado = true;
-		}
-		
-		wifi.startScan();
-		
-		Log.d(TAG, "onStart");
-	}
-	
-	@Override
-	protected void onPause() {
-		super.onPause();
-		if (receiverRegistrado) {
-			unregisterReceiver(receiver);
-			receiverRegistrado = false;
-		}
-		
-		Log.d(TAG, "onPause");
-	}
-	
-    @Override
-    protected void onStop() {
-    	super.onStop();		
-		
-		Log.d(TAG, "onStop");
-    }
     
-    @Override
-    protected void onDestroy() {    	
-    	super.onDestroy();
-    	Log.d(TAG, "onDestroy");
+    private WifiConfiguration configuraRedeWifi(WifiConfiguration wc, String pass, WifiType wifiType) {
+    	switch (wifiType) {
+		case WEP:
+			wc.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.NONE);
+		    wc.allowedProtocols.set(WifiConfiguration.Protocol.RSN); 
+		    wc.allowedProtocols.set(WifiConfiguration.Protocol.WPA);
+		    wc.allowedAuthAlgorithms.set(WifiConfiguration.AuthAlgorithm.OPEN);
+		    wc.allowedAuthAlgorithms.set(WifiConfiguration.AuthAlgorithm.SHARED);
+		    wc.allowedPairwiseCiphers.set(WifiConfiguration.PairwiseCipher.TKIP);
+		    wc.allowedPairwiseCiphers.set(WifiConfiguration.PairwiseCipher.CCMP);
+		    wc.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.WEP40);
+		    wc.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.WEP104);
+		    			
+			wc.wepKeys[0] = pass;
+		    //wc.wepKeys[0] = "\"" + pass + "\"";
+			wc.wepTxKeyIndex = 0;
+			
+			break;
+		case WPA_PSK:
+	        wc.preSharedKey = "\"" + pass + "\"";
+	        wc.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.TKIP);
+	        wc.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.CCMP);
+	        wc.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.WPA_PSK);
+	        wc.allowedPairwiseCiphers.set(WifiConfiguration.PairwiseCipher.TKIP);
+	        wc.allowedPairwiseCiphers.set(WifiConfiguration.PairwiseCipher.CCMP);
+	        wc.allowedProtocols.set(WifiConfiguration.Protocol.WPA);
+	        wc.allowedProtocols.set(WifiConfiguration.Protocol.RSN);
+	        
+			break;
+		default: 
+			Log.e(TAG, "Tipo de rede WIFI não encontrado");
+			break;
+		}
+		
+		wc.status = WifiConfiguration.Status.ENABLED;
+		
+		return wc;
     }
     
     private String returnWifiState(int state) {
@@ -341,45 +389,6 @@ public class HelloAndroidActivity extends Activity {
     	}
     	return retorno;
     }
-    
-    private WifiConfiguration configuraRedeWifi(WifiConfiguration wc, String pass) {
-    	switch (WIFI_TYPE) {
-		case WEP:
-			wc.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.NONE);
-		    wc.allowedProtocols.set(WifiConfiguration.Protocol.RSN); 
-		    wc.allowedProtocols.set(WifiConfiguration.Protocol.WPA);
-		    wc.allowedAuthAlgorithms.set(WifiConfiguration.AuthAlgorithm.OPEN);
-		    wc.allowedAuthAlgorithms.set(WifiConfiguration.AuthAlgorithm.SHARED);
-		    wc.allowedPairwiseCiphers.set(WifiConfiguration.PairwiseCipher.CCMP);
-		    wc.allowedPairwiseCiphers.set(WifiConfiguration.PairwiseCipher.TKIP);
-		    wc.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.WEP40);
-		    wc.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.WEP104);
-			
-			wc.wepKeys[0] = pass;
-			wc.wepTxKeyIndex = 0;
-			
-			break;
-		case WPA_PSK:
-	        wc.preSharedKey = "\"" + pass + "\"";
-	        wc.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.TKIP);
-	        wc.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.CCMP);
-	        wc.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.WPA_PSK);
-	        wc.allowedPairwiseCiphers.set(WifiConfiguration.PairwiseCipher.TKIP);
-	        wc.allowedPairwiseCiphers.set(WifiConfiguration.PairwiseCipher.CCMP);
-	        wc.allowedProtocols.set(WifiConfiguration.Protocol.WPA);
-	        wc.allowedProtocols.set(WifiConfiguration.Protocol.RSN);
-	        
-			break;
-		default: 
-			Log.e(TAG, "Tipo de rede WIFI não encontrada");
-			break;
-		}
-		
-		wc.status = WifiConfiguration.Status.ENABLED;
-		
-		return wc;
-    }
-    
     
     
     private enum WifiType {

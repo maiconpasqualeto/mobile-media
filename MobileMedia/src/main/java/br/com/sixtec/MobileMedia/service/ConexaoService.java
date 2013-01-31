@@ -61,7 +61,9 @@ public class ConexaoService extends Service{
 					MobileFacade.getInstance().downloadMidia(idMidia, nomeArquivo);
 				}
 				
-				MobileFacade.getInstance().moveArquivosPlaylist();				
+				if (arr.length() > 0)
+					MobileFacade.getInstance().moveArquivosPlaylist();
+				
 				sucesso = true;
 				
 			} catch (JSONException e) {

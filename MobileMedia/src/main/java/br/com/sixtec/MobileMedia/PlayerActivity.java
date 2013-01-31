@@ -122,7 +122,7 @@ public class PlayerActivity extends Activity implements OnErrorListener,
         mp.setOnPreparedListener(this);
         mp.setAudioStreamType(AudioManager.STREAM_MUSIC);  
         // Set the surface for the video output
-        mp.setDisplay(holder);
+        //mp.setDisplay(holder);
         
         // Preparar o arquivo
         FilenameFilter fileFilter = new FilenameFilter() {
@@ -259,6 +259,7 @@ public class PlayerActivity extends Activity implements OnErrorListener,
 
     public void surfaceCreated(SurfaceHolder surfaceholder) {
         Log.d(TAG, "surfaceCreated called");
+        mp.setDisplay(surfaceholder);
         prepareToPlay();
     }
 

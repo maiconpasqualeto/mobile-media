@@ -29,8 +29,8 @@ public class ConexaoRest {
 	
 	private static final String TAG = "MobileMedia";
 	
-	//private String host = "http://10.1.1.104:8080/WebMedia/restfull/";
-	private String host = "http://192.168.20.215:8080/WebMedia/restfull/";
+	private String host = "http://10.1.1.104:8080/WebMedia/restfull/";
+	//private String host = "http://192.168.20.215:8080/WebMedia/restfull/";
 
 	/**
 	 * 
