@@ -12,7 +12,10 @@ import org.apache.http.message.BasicNameValuePair;
 import org.json.JSONArray;
 import org.json.JSONException;
 
+import android.content.Context;
 import android.util.Log;
+import br.com.sixtec.MobileMedia.persistencia.MMConfiguracao;
+import br.com.sixtec.MobileMedia.persistencia.MobileMediaDAO;
 import br.com.sixtec.MobileMedia.utils.MobileMediaHelper;
 import br.com.sixtec.MobileMedia.webservice.ConexaoRest;
 
@@ -27,22 +30,30 @@ public class MobileFacade {
 	private ConexaoRest conn;
 
 	private static MobileFacade facade;
+	private Context ctx;
 	
-	public static MobileFacade getInstance(){
+	public static MobileFacade getInstance(Context ctx){
 		if (facade == null)
-			facade = new MobileFacade();
+			facade = new MobileFacade(ctx);
 		
 		return facade;
 	}
 	
-	public MobileFacade() {
+	public MobileFacade(Context ctx) {
 		conn = new ConexaoRest();
+		this.ctx = ctx;
+	}
+	
+	private String retornaHost(){
+		MMConfiguracao c = MobileMediaDAO.getInstance(ctx).buscaConfiguracao();
+		return c.getIp() + ":" + c.getPorta();
 	}
 		
 	public void downloadMidia(String idMidia, String nomeArquivo) {
 		String nomeRest = "board/downloadmidia/" + idMidia;
 		
-		byte[] b = conn.getREST(nomeRest);
+		
+		byte[] b = conn.getREST(retornaHost(), nomeRest);
 		
 		if (b == null) {
 			Log.e(TAG, "Falha ao acessar WS");
@@ -83,7 +94,7 @@ public class MobileFacade {
 		
 		JSONArray arr = null;
 		
-		byte[] b = conn.postREST(nomeRest, p1, p2);
+		byte[] b = conn.postREST(retornaHost(), nomeRest, p1, p2);
 		if (b == null) {
 			arr = new JSONArray();
 			return arr;

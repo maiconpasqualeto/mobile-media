@@ -28,8 +28,9 @@ import br.com.sixtec.MobileMedia.utils.MobileMediaHelper;
 public class ConexaoRest {
 	
 	private static final String TAG = "MobileMedia";
+	private static final String NOME_SERVICO = "/WebMedia/restfull/";
 	
-	private String host = "http://10.1.1.104:8080/WebMedia/restfull/";
+	//private String host = "http://10.1.1.104:8080/WebMedia/restfull/";
 	//private String host = "http://192.168.20.215:8080/WebMedia/restfull/";
 
 	/**
@@ -37,10 +38,10 @@ public class ConexaoRest {
 	 * @param nomeRest nome do rest (path) ex: board/downloadmidia/1
 	 * @return
 	 */
-	public byte[] getREST(String nomeRest) {
+	public byte[] getREST(String host, String nomeRest) {
 		byte[] retorno = null;
 		HttpClient httpclient = new DefaultHttpClient();
-		HttpGet httpget = new HttpGet(host + nomeRest);
+		HttpGet httpget = new HttpGet("http://" + host + NOME_SERVICO + nomeRest);
 		InputStream is = null;
 		try {
 			HttpResponse response = httpclient.execute(httpget);
@@ -65,10 +66,10 @@ public class ConexaoRest {
 		return retorno;
 	}
 		
-	public byte[] postREST(String nomeRest, NameValuePair...props) {
+	public byte[] postREST(String host, String nomeRest, NameValuePair...props) {
 		byte[] b = null;
 		HttpClient httpclient = new DefaultHttpClient();
-		HttpPost post = new HttpPost(host + nomeRest);
+		HttpPost post = new HttpPost("http://" + host + NOME_SERVICO + nomeRest);
 		InputStream is = null;
 		try {
 			

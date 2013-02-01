@@ -5,7 +5,7 @@
     >
 
     <TextView
-        android:id="@+config/lblHeader"
+        android:id="@+conf/lblHeader"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Configuração do Host" />
@@ -93,6 +93,31 @@
             android:layout_height="wrap_content"
             android:ems="10"
             android:inputType="textPassword" />
+
+    </TableRow>
+
+    <TextView
+        android:id="@+conf/lblHeaderIdent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Identificador único da board" />
+
+    <TableRow
+        android:id="@+id/tableRow5"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" >
+
+        <TextView
+            android:id="@+conf/lblIdentificador"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Identificador:" />
+
+        <EditText
+            android:id="@+conf/txtIdentificador"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:ems="10" />
 
     </TableRow>
 

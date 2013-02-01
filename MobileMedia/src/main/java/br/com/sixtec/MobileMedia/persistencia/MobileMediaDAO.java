@@ -44,6 +44,7 @@ public class MobileMediaDAO {
 		v.put("porta", c.getPorta());
 		v.put("ssid", c.getSsid());
 		v.put("pass", c.getPass());
+		v.put("identificador", c.getIdentificador());
 		
 		String clausulaWhere = "_id=?";
 		String[] args = new String[]{ c.getId().toString() };
@@ -60,7 +61,7 @@ public class MobileMediaDAO {
 		SQLiteDatabase db = dbman.getReadableDatabase();
 		MMConfiguracao conf = null;
 		Cursor c = db.query(DatabaseManager.TABLE_NAME, 
-				new String[] {"_id", "ip", "porta", "ssid", "pass"}, 
+				new String[] {"_id", "ip", "porta", "ssid", "pass", "identificador"}, 
 				null, null, null, null, null);
 		
 		if (c.moveToFirst()) {
@@ -70,6 +71,7 @@ public class MobileMediaDAO {
 			Integer porta = c.getInt(2);
 			String ssid = c.getString(3);
 			String pass = c.getString(4);
+			String identificador = c.getString(5);
 			
 			conf = new MMConfiguracao();
 			conf.setId(id);
@@ -77,6 +79,7 @@ public class MobileMediaDAO {
 			conf.setPorta(porta);
 			conf.setSsid(ssid);
 			conf.setPass(pass);
+			conf.setIdentificador(identificador);
 						
 		}
 		

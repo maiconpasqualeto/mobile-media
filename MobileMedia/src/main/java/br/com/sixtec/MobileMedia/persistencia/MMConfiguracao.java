@@ -19,6 +19,8 @@ public class MMConfiguracao {
 	
 	private String pass;
 	
+	private String identificador;
+	
 
 	public Long getId() {
 		return id;
@@ -58,6 +60,14 @@ public class MMConfiguracao {
 
 	public void setPass(String pass) {
 		this.pass = pass;
+	}
+
+	public String getIdentificador() {
+		return identificador;
+	}
+
+	public void setIdentificador(String identificador) {
+		this.identificador = identificador;
 	}
 	
 

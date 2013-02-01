@@ -4,32 +4,36 @@
 package br.com.sixtec.MobileMedia;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
-import java.net.URLConnection;
 import java.util.Arrays;
 import java.util.List;
 
-import br.com.sixtec.MobileMedia.utils.MobileMediaHelper;
-
 import android.app.Activity;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.PixelFormat;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnBufferingUpdateListener;
 import android.media.MediaPlayer.OnCompletionListener;
 import android.media.MediaPlayer.OnErrorListener;
+import android.net.wifi.WifiManager;
 import android.os.Bundle;
-import android.os.Environment;
+import android.provider.Settings;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
-import android.webkit.URLUtil;
-import android.widget.Button;
 import android.widget.Toast;
+import br.com.sixtec.MobileMedia.persistencia.MMConfiguracao;
+import br.com.sixtec.MobileMedia.persistencia.MobileMediaDAO;
+import br.com.sixtec.MobileMedia.receivers.WifiReceiver;
+import br.com.sixtec.MobileMedia.service.ConexaoService;
+import br.com.sixtec.MobileMedia.utils.MobileMediaHelper;
 /**
  * @author maicon
  *
@@ -40,23 +44,22 @@ public class PlayerActivity extends Activity implements OnErrorListener,
 	
     private static final String TAG = "MobileMedia";
     
+    private static final int ID_INTENT_CONFIG = 100;
     
-    //private final File extDir = Environment.getExternalStorageDirectory();
-    //private final String path = extDir.getPath() + "/";
-
     private MediaPlayer mp;
     private SurfaceView mPreview;
-    //private EditText mPath;
     private SurfaceHolder holder;
-    private Button mPlay;
-    private Button mPause;
-    private Button mReset;
-    private Button mStop;
     
     private List<String> arquivos;
     private int indexArquivo; 
-    //private String pathCompleto;
     
+    // wifi
+    private BroadcastReceiver receiver;
+    private String ssidRede = null;
+    private String passRede = null;
+    private boolean receiverRegistrado = false;
+    private String serial = "sem serial";
+    private String identificador = "";
 
     /**
      * Called when the activity is first created.
@@ -65,42 +68,6 @@ public class PlayerActivity extends Activity implements OnErrorListener,
         super.onCreate(icicle);
 
         setContentView(R.layout.player_full);
-
-        // Set up the play/pause/reset/stop buttons
-        
-        //mPath = (EditText) findViewById(R.id.path);
-        /*mPlay = (Button) findViewById(R.id.play);
-        mPause = (Button) findViewById(R.id.pause);
-        mReset = (Button) findViewById(R.id.reset);
-        mStop = (Button) findViewById(R.id.stop);
-
-        mPlay.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View view) {
-                playVideo();
-            }
-        });
-        mPause.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View view) {
-                if (mp != null) {
-                    mp.pause();
-                }
-            }
-        });
-        mReset.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View view) {
-                if (mp != null) {
-                    mp.seekTo(0);
-                }
-            }
-        });
-        mStop.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View view) {
-                if (mp != null) {
-                    mp.stop();
-                    mp.release();
-                }
-            }
-        });*/
 
         // Set the transparency
         getWindow().setFormat(PixelFormat.TRANSPARENT);
@@ -146,6 +113,16 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     	indexArquivo = -1;
     	
     	defineArquivoParaExecucao(mp);
+    	
+    	
+    	serial = Settings.System.getString(getContentResolver(),
+                Settings.System.ANDROID_ID);
+            
+        Log.v(TAG, "Device Serial: " + serial);
+        
+        atualizaConfigRede();
+        
+        receivers();
     }
     
     private void defineArquivoParaExecucao(MediaPlayer mediaPlayer) {
@@ -184,47 +161,7 @@ public class PlayerActivity extends Activity implements OnErrorListener,
         } catch (Exception e) {
             Log.e(TAG, "error: " + e.getMessage(), e);
             if (mp != null) {
-                //mp.stop();
                 mp.release();
-            }
-        }
-    }
-
-    /**
-     * If the user has specified a local url, then we download the
-     * url stream to a temporary location and then call the setDataSource
-     * for that local file
-     *
-     * @param path
-     * @throws IOException
-     */
-    private void setDataSource(String path) throws IOException {
-        if (!URLUtil.isNetworkUrl(path)) {
-            mp.setDataSource(path);
-        } else {
-            URL url = new URL(path);
-            URLConnection cn = url.openConnection();
-            cn.connect();
-            InputStream stream = cn.getInputStream();
-            if (stream == null)
-                throw new RuntimeException("stream is null");
-            File temp = File.createTempFile(path + "/mediaplayertmp", "dat");
-            String tempPath = temp.getAbsolutePath();
-            FileOutputStream out = new FileOutputStream(temp);
-            byte buf[] = new byte[128];
-            do {
-                int numread = stream.read(buf);
-                if (numread <= 0)
-                    break;
-                out.write(buf, 0, numread);
-            } while (true);
-            mp.setDataSource(tempPath);
-            try {
-                stream.close();
-                out.close();
-            }
-            catch (IOException ex) {
-                Log.e(TAG, "error: " + ex.getMessage(), ex);
             }
         }
     }
@@ -247,7 +184,6 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     	mediaPlayer.reset();
         defineArquivoParaExecucao(mediaPlayer);
         prepareToPlay();
-        //mp.start();
     }
 
     public void onPrepared(MediaPlayer mediaplayer) {
@@ -272,4 +208,92 @@ public class PlayerActivity extends Activity implements OnErrorListener,
         mp.release();
         mp = null;
     }
+    
+    @Override
+    protected void onStart() {
+    	super.onStart();
+    	
+    	if (!receiverRegistrado) {
+			IntentFilter f = new IntentFilter();
+			f.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
+			f.addAction(WifiManager.SUPPLICANT_STATE_CHANGED_ACTION);
+			f.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION);
+			f.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);			
+			
+			registerReceiver(receiver, f);
+			receiverRegistrado = true;
+		}
+    }
+    
+    @Override
+    protected void onPause() {
+    	super.onPause();
+    	mp.pause();
+    	
+    	if (receiverRegistrado) {
+			unregisterReceiver(receiver);
+			receiverRegistrado = false;
+		}
+    }
+    
+    @Override
+    protected void onRestart() {
+    	super.onRestart();
+    	if (mp != null)
+    		mp.start();
+    	
+    	atualizaConfigRede();
+    }
+    
+    
+    // métodos do Wifi
+    public void receivers(){
+		WifiManager wifi = (WifiManager) getSystemService(Context.WIFI_SERVICE);
+		if (receiver == null)
+			receiver = new WifiReceiver(wifi, ssidRede, passRede);
+		
+	}
+    
+    private void atualizaConfigRede(){
+        MMConfiguracao conf = MobileMediaDAO.getInstance(this).buscaConfiguracao();
+        ssidRede = conf.getSsid();
+        passRede = conf.getPass();
+        identificador = conf.getIdentificador();
+    }
+    
+    private void downloadDasMidias(){
+    	Intent it = new Intent(this, ConexaoService.class);
+    	it.putExtra("serial", serial);
+    	it.putExtra("identificador", identificador);
+    	startService(it);
+    }
+    
+    
+    // métodos da Activity
+    
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+    	menu.add(Menu.NONE, 0, Menu.NONE, "Configurar");
+    	    	
+    	return true;
+    }
+    
+    @Override
+    public boolean onMenuItemSelected(int featureId, MenuItem item) {
+    	if (item.getItemId() == 0) {
+    		startActivityForResult(new Intent(this, ConfigActivity.class), ID_INTENT_CONFIG);
+    	}
+    	return true;
+    }
+    
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+    	if (requestCode == ID_INTENT_CONFIG &&
+    			resultCode == RESULT_OK){
+    		
+    		// Fazer sincronia com o WS e startar o download Midias.
+    		
+    	}
+    }
+    
 }

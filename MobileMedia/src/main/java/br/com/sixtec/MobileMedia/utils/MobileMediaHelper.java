@@ -9,9 +9,13 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
+import java.net.URLConnection;
 
+import android.media.MediaPlayer;
 import android.os.Environment;
 import android.util.Log;
+import android.webkit.URLUtil;
 
 /**
  * @author maicon
@@ -78,5 +82,44 @@ public class MobileMediaHelper {
         	}
         }
 	}
+	
+	/**
+     * If the user has specified a local url, then we download the
+     * url stream to a temporary location and then call the setDataSource
+     * for that local file
+     *
+     * @param path
+     * @throws IOException
+     */
+    public void setDataSource(MediaPlayer mp, String path) throws IOException {
+        if (!URLUtil.isNetworkUrl(path)) {
+            mp.setDataSource(path);
+        } else {
+            URL url = new URL(path);
+            URLConnection cn = url.openConnection();
+            cn.connect();
+            InputStream stream = cn.getInputStream();
+            if (stream == null)
+                throw new RuntimeException("stream is null");
+            File temp = File.createTempFile(path + "/mediaplayertmp", "dat");
+            String tempPath = temp.getAbsolutePath();
+            FileOutputStream out = new FileOutputStream(temp);
+            byte buf[] = new byte[128];
+            do {
+                int numread = stream.read(buf);
+                if (numread <= 0)
+                    break;
+                out.write(buf, 0, numread);
+            } while (true);
+            mp.setDataSource(tempPath);
+            try {
+                stream.close();
+                out.close();
+            }
+            catch (IOException ex) {
+                Log.e(TAG, "error: " + ex.getMessage(), ex);
+            }
+        }
+    }
 
 }

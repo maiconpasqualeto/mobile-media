@@ -32,7 +32,7 @@ public class ConexaoService extends Service{
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		
 		String serial = intent.getExtras().getString("serial");
-		String identifidor = intent.getExtras().getString("identifidor");
+		String identifidor = intent.getExtras().getString("identificador");
 		
 		task = new DownloadTask();
 		task.execute(serial, identifidor);
@@ -51,18 +51,19 @@ public class ConexaoService extends Service{
 		protected Boolean doInBackground(String... params) {
 			boolean sucesso = false;
 			try {
+				MobileFacade facade = MobileFacade.getInstance(getApplicationContext());
 				// pega nova lista de midias do servidor
-				JSONArray arr = MobileFacade.getInstance().registraBoard(params[0], params[1]);
+				JSONArray arr = facade.registraBoard(params[0], params[1]);
 				
 				for (int i=0; i<arr.length(); i++) {
 					JSONObject o = arr.getJSONObject(i);
 					final String idMidia = o.getString("id");
 					final String nomeArquivo = o.getString("nomeArquivo");
-					MobileFacade.getInstance().downloadMidia(idMidia, nomeArquivo);
+					facade.downloadMidia(idMidia, nomeArquivo);
 				}
 				
 				if (arr.length() > 0)
-					MobileFacade.getInstance().moveArquivosPlaylist();
+					facade.moveArquivosPlaylist();
 				
 				sucesso = true;
 				
