@@ -118,6 +118,12 @@ public class MobileFacade {
 				return filename.endsWith(MobileMediaHelper.EXTENSAO_ARQUIVO_MIDIA);
 			}
 		};
+		// se não tiver arquivos temporários não faz nada
+		File dirTemp = new File(MobileMediaHelper.DIRETORIO_TEMPORARIO);
+		File[] arqsTemp = dirTemp.listFiles(fnf);
+		if (arqsTemp.length == 0)
+			return;
+		
 		// apaga as midias atuais
 		File dirMidias =  new File(MobileMediaHelper.DIRETORIO_MIDIAS);
 		File[] arsMidia = dirMidias.listFiles(fnf);
@@ -128,8 +134,6 @@ public class MobileFacade {
 		}
 		
 		// copia as midias baixadas
-		File dirTemp = new File(MobileMediaHelper.DIRETORIO_TEMPORARIO);
-		File[] arqsTemp = dirTemp.listFiles(fnf);
 		for (int i=0; i<arqsTemp.length; i++){
 			File arq = arqsTemp[i];			
 			MobileMediaHelper.moveFile(arq, dirMidias);

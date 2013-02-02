@@ -10,6 +10,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import android.app.Activity;
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -22,17 +24,20 @@ import android.media.MediaPlayer.OnCompletionListener;
 import android.media.MediaPlayer.OnErrorListener;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
-import android.provider.Settings;
+import android.os.Handler;
+import android.os.Message;
+import android.os.Messenger;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.widget.Toast;
+import br.com.sixtec.MobileMedia.facade.MobileFacade;
 import br.com.sixtec.MobileMedia.persistencia.MMConfiguracao;
 import br.com.sixtec.MobileMedia.persistencia.MobileMediaDAO;
+import br.com.sixtec.MobileMedia.receivers.AlarmReceiver;
 import br.com.sixtec.MobileMedia.receivers.WifiReceiver;
-import br.com.sixtec.MobileMedia.service.ConexaoService;
 import br.com.sixtec.MobileMedia.utils.MobileMediaHelper;
 /**
  * @author maicon
@@ -51,15 +56,20 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     private SurfaceHolder holder;
     
     private List<String> arquivos;
-    private int indexArquivo; 
+    private int indexArquivo = -1; 
     
     // wifi
     private BroadcastReceiver receiver;
     private String ssidRede = null;
     private String passRede = null;
     private boolean receiverRegistrado = false;
-    private String serial = "sem serial";
-    private String identificador = "";
+    
+    private final int INTERVALO = 60000; // 1 minuto
+    
+    private PendingIntent pi = null;
+    private Messenger messenger = new Messenger(new ServiceReturnHandle());
+    
+    private static boolean novosArquivos = false;
 
     /**
      * Called when the activity is first created.
@@ -68,18 +78,51 @@ public class PlayerActivity extends Activity implements OnErrorListener,
         super.onCreate(icicle);
 
         setContentView(R.layout.player_full);
+        
+        atualizarListaArquivos();
+    	
+    	mPreview = (SurfaceView) findViewById(R.id.newSurface);
+        criaSurfaceEMediaPlayer(mPreview);
+    	
+        atualizarListaArquivos();
+        
+    	defineArquivoParaExecucao(mp);
+    	
+        atualizaConfigRede();
+        
+        receivers();
+        
+        registraServicoDownload();
+    }
+    
+	private void registraServicoDownload() {
+		Intent it = new Intent(this, AlarmReceiver.class);
+		it.putExtra("messenger", messenger);
+		pi = PendingIntent.getBroadcast(
+				this, AlarmReceiver.ALARM_RECEIVER_REQUEST_CODE, 
+				it, PendingIntent.FLAG_CANCEL_CURRENT);
+		AlarmManager alarm = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+		// Começa contar o tempo a partir de agora
+		alarm.setRepeating(AlarmManager.RTC, System.currentTimeMillis(), INTERVALO, pi);
+		
+	}
+	
+	private void cancelServicoDownload(){
+		AlarmManager alarm = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+		alarm.cancel(pi);
+	}
 
-        // Set the transparency
+	/**
+	 * @param mPreview2
+	 */
+	private void criaSurfaceEMediaPlayer(SurfaceView mPreview2) {
+		// Set the transparency
         getWindow().setFormat(PixelFormat.TRANSPARENT);
-
-        mPreview = (SurfaceView) findViewById(R.id.newSurface);
-        // Set a size for the video screen
-        holder = mPreview.getHolder();
+		
+		holder = mPreview.getHolder();
         holder.addCallback(this);
         // Não tirar essa linha, resolve o problema do erro (1, -38)
         holder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
-        
-        //holder.setFixedSize(65, 50);
         
         // Create a new media player and set the listeners
         mp = new MediaPlayer();
@@ -88,45 +131,20 @@ public class PlayerActivity extends Activity implements OnErrorListener,
         mp.setOnCompletionListener(this);
         mp.setOnPreparedListener(this);
         mp.setAudioStreamType(AudioManager.STREAM_MUSIC);  
-        // Set the surface for the video output
-        //mp.setDisplay(holder);
-        
-        // Preparar o arquivo
-        FilenameFilter fileFilter = new FilenameFilter() {
-			@Override
-			public boolean accept(File dir, String filename) {
-				return filename.endsWith(MobileMediaHelper.EXTENSAO_ARQUIVO_MIDIA);
-			}
-		};
-		File midiasDir = new File(MobileMediaHelper.DIRETORIO_MIDIAS);
-		arquivos = Arrays.asList(midiasDir.list(fileFilter));
-		if (arquivos.isEmpty()){
-			Log.e(TAG, "Não existem midias para execução");
-			// TODO [Maicon] - criar um playlist padrao.
-			Toast.makeText(this, "Não existem midias para execução", Toast.LENGTH_SHORT).show();
-			finish();
-		}
-		
-    	for (String nomeArq : arquivos)
-    		Log.v(TAG, "file: " + nomeArq);
-    	
-    	indexArquivo = -1;
-    	
-    	defineArquivoParaExecucao(mp);
-    	
-    	
-    	serial = Settings.System.getString(getContentResolver(),
-                Settings.System.ANDROID_ID);
-            
-        Log.v(TAG, "Device Serial: " + serial);
-        
-        atualizaConfigRede();
-        
-        receivers();
-    }
-    
-    private void defineArquivoParaExecucao(MediaPlayer mediaPlayer) {
+	}
+
+	private void defineArquivoParaExecucao(MediaPlayer mediaPlayer) {
     	try {
+    		if (novosArquivos) {
+    			atualizarListaArquivos();
+    			novosArquivos = false;
+    		}
+    		
+    		if (arquivos.size() == 0) {
+    			Log.d(MobileMediaHelper.TAG, "Não existem arquivos para execução");
+    			return;
+    		}
+    		
     		if( (++indexArquivo) == arquivos.size() )
     			indexArquivo = 0;
     		
@@ -205,13 +223,17 @@ public class PlayerActivity extends Activity implements OnErrorListener,
 
     public void surfaceDestroyed(SurfaceHolder surfaceholder) {
         Log.d(TAG, "surfaceDestroyed called");
-        mp.release();
-        mp = null;
+        
     }
     
     @Override
     protected void onStart() {
     	super.onStart();
+    }
+    
+    @Override
+    protected void onResume() {
+    	super.onResume();
     	
     	if (!receiverRegistrado) {
 			IntentFilter f = new IntentFilter();
@@ -223,26 +245,36 @@ public class PlayerActivity extends Activity implements OnErrorListener,
 			registerReceiver(receiver, f);
 			receiverRegistrado = true;
 		}
+    	
     }
     
     @Override
     protected void onPause() {
     	super.onPause();
-    	mp.pause();
     	
     	if (receiverRegistrado) {
 			unregisterReceiver(receiver);
 			receiverRegistrado = false;
 		}
+    	
+    	if (mp.isPlaying()) 
+    		mp.stop();
+    	
     }
     
     @Override
     protected void onRestart() {
     	super.onRestart();
-    	if (mp != null)
-    		mp.start();
     	
     	atualizaConfigRede();
+    }
+    
+    @Override
+    protected void onDestroy() {
+    	super.onDestroy();
+    	mp.release();
+        mp = null;
+        cancelServicoDownload();
     }
     
     
@@ -258,16 +290,7 @@ public class PlayerActivity extends Activity implements OnErrorListener,
         MMConfiguracao conf = MobileMediaDAO.getInstance(this).buscaConfiguracao();
         ssidRede = conf.getSsid();
         passRede = conf.getPass();
-        identificador = conf.getIdentificador();
     }
-    
-    private void downloadDasMidias(){
-    	Intent it = new Intent(this, ConexaoService.class);
-    	it.putExtra("serial", serial);
-    	it.putExtra("identificador", identificador);
-    	startService(it);
-    }
-    
     
     // métodos da Activity
     
@@ -296,4 +319,40 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     	}
     }
     
+    private static class ServiceReturnHandle extends Handler {
+    	
+    	@Override
+    	public void handleMessage(Message msg) {
+    		Boolean sucessoDownload = (Boolean) msg.obj;
+    		Log.d(MobileMediaHelper.TAG, 
+    				"retornou resultado SERVICE para Activity: " + msg.obj);
+    		if (sucessoDownload) {    			
+    			novosArquivos = true;
+    		}
+    			
+    	}
+    }
+    
+    private void atualizarListaArquivos() {
+    	MobileFacade.getInstance(this).moveArquivosPlaylist();
+    	
+    	// Preparar o arquivo
+        FilenameFilter fileFilter = new FilenameFilter() {
+			@Override
+			public boolean accept(File dir, String filename) {
+				return filename.endsWith(MobileMediaHelper.EXTENSAO_ARQUIVO_MIDIA);
+			}
+		};
+		File midiasDir = new File(MobileMediaHelper.DIRETORIO_MIDIAS);
+		arquivos = Arrays.asList(midiasDir.list(fileFilter));
+		if (arquivos.isEmpty()){
+			Log.e(TAG, "Não existem midias para execução");
+			// TODO [Maicon] - criar um playlist padrao.
+		}
+		
+    	for (String nomeArq : arquivos)
+    		Log.d(TAG, "file: " + nomeArq);
+    	
+    	indexArquivo = -1;
+	}
 }
