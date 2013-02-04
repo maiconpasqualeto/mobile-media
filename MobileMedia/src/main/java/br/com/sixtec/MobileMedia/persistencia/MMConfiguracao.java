@@ -3,6 +3,12 @@
  */
 package br.com.sixtec.MobileMedia.persistencia;
 
+import java.text.ParseException;
+import java.util.Date;
+
+import android.util.Log;
+import br.com.sixtec.MobileMedia.utils.MobileMediaHelper;
+
 /**
  * @author maicon
  *
@@ -21,6 +27,7 @@ public class MMConfiguracao {
 	
 	private String identificador;
 	
+	private Date dataHoraPlaylist;
 
 	public Long getId() {
 		return id;
@@ -69,6 +76,32 @@ public class MMConfiguracao {
 	public void setIdentificador(String identificador) {
 		this.identificador = identificador;
 	}
+
+	public Date getDataHoraPlaylist() {
+		return dataHoraPlaylist;
+	}
+
+	public void setDataHoraPlaylist(Date dataHoraPlaylist) {
+		this.dataHoraPlaylist = dataHoraPlaylist;
+	}
 	
+	public String getDataHoraPlaylistStringSQLite(){
+		if (getDataHoraPlaylist() == null)
+			return "";
+		return MobileMediaHelper.SQLITE_DATE_FORMAT.format(getDataHoraPlaylist());
+	}
+	
+	public void setDataHoraPlaylistStringSQLite(String strDataHoraPlaylist) {
+		if (strDataHoraPlaylist == null || "".equals(strDataHoraPlaylist))
+			return;
+		
+		try {
+			setDataHoraPlaylist(MobileMediaHelper.SQLITE_DATE_FORMAT.parse(strDataHoraPlaylist));
+			
+		} catch (ParseException e) {
+			Log.e(MobileMediaHelper.TAG, "Erro ao converter data");
+		}
+		
+	}
 
 }

@@ -25,7 +25,7 @@ public class DatabaseManager extends SQLiteOpenHelper {
 	
 	private static final String NOME_BANCO = "mobile_media_db";
 	
-	private static final int VERSAO_BANCO = 2;
+	private static final int VERSAO_BANCO = 3;
 
 	/**
 	 * @param context
@@ -48,8 +48,12 @@ public class DatabaseManager extends SQLiteOpenHelper {
 	
 	@Override
 	public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-		if (oldVersion == 1) {
+		if (oldVersion == 1 && newVersion > 1) {
 			String sql = "ALTER TABLE " + TABLE_NAME + " ADD COLUMN identificador TEXT";
+			db.execSQL(sql);
+		} 
+		if (newVersion > 2) {
+			String sql = "ALTER TABLE " + TABLE_NAME + " ADD COLUMN data_hora_playlist TEXT";
 			db.execSQL(sql);
 		}
 

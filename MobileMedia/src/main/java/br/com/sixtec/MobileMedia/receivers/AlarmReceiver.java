@@ -7,10 +7,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Messenger;
-import android.provider.Settings;
 import android.util.Log;
-import br.com.sixtec.MobileMedia.persistencia.MMConfiguracao;
-import br.com.sixtec.MobileMedia.persistencia.MobileMediaDAO;
 import br.com.sixtec.MobileMedia.service.ConexaoService;
 import br.com.sixtec.MobileMedia.utils.MobileMediaHelper;
 
@@ -27,18 +24,11 @@ public class AlarmReceiver extends BroadcastReceiver {
 	public void onReceive(Context ctx, Intent it) {
 		Log.d(MobileMediaHelper.TAG, "Receiver Alarm.");
 		
-		String serial = Settings.Secure.getString(ctx.getContentResolver(),
-                Settings.System.ANDROID_ID);
-        
-        Log.v(MobileMediaHelper.TAG, "Device Serial: " + serial);
-		
-		MMConfiguracao conf = MobileMediaDAO.getInstance(ctx).buscaConfiguracao();
-		
-        String identificador = conf.getIdentificador();
         Intent serviceIntent = new Intent(ctx, ConexaoService.class);
-        serviceIntent.putExtra("serial", serial);
-        serviceIntent.putExtra("identificador", identificador);
+        serviceIntent.putExtra("serial", it.getStringExtra("serial"));
+        serviceIntent.putExtra("identificador", it.getStringExtra("identificador"));
         serviceIntent.putExtra("messenger", (Messenger) it.getParcelableExtra("messenger"));
+        //serviceIntent.putExtra("strDataHoraPlaylist", it.getStringExtra("strDataHoraPlaylist"));
     	ctx.startService(serviceIntent);
 	}
 

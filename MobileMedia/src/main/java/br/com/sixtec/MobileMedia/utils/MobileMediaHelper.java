@@ -11,6 +11,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Locale;
 
 import android.media.MediaPlayer;
 import android.os.Environment;
@@ -28,7 +31,9 @@ public class MobileMediaHelper {
 	public static final String DIRETORIO_MIDIAS = Environment.getExternalStorageDirectory().getPath() + "/";
 	public static final String DIRETORIO_TEMPORARIO = Environment.getExternalStorageDirectory().getPath() + "/tmp/";
 	public static final String EXTENSAO_ARQUIVO_MIDIA = ".mp4";
-
+	public static final DateFormat SQLITE_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+	public static final DateFormat JSON_DATE_FORMAT = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault());
+	
 	public static byte[] toByteArray(InputStream is) throws IOException {
 		byte[] bytes = new byte[1024];
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();

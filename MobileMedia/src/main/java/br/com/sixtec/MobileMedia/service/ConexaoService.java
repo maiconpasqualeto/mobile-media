@@ -3,9 +3,8 @@
  */
 package br.com.sixtec.MobileMedia.service;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
+import java.io.File;
+import java.io.FilenameFilter;
 
 import android.app.Service;
 import android.content.Intent;
@@ -16,6 +15,8 @@ import android.os.Messenger;
 import android.os.RemoteException;
 import android.util.Log;
 import br.com.sixtec.MobileMedia.facade.MobileFacade;
+import br.com.sixtec.MobileMedia.persistencia.Midia;
+import br.com.sixtec.MobileMedia.persistencia.Playlist;
 import br.com.sixtec.MobileMedia.utils.MobileMediaHelper;
 
 /**
@@ -35,8 +36,9 @@ public class ConexaoService extends Service {
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		
-		String serial = intent.getExtras().getString("serial");
-		String identifidor = intent.getExtras().getString("identificador");
+		String serial = intent.getStringExtra("serial");
+		String identifidor = intent.getStringExtra("identificador");
+		//String strDataHoraPlaylist = intent.getStringExtra("strDataHoraPlaylist");
 		
 		this.task = new DownloadTask();
 		this.task.execute(serial, identifidor);
@@ -56,27 +58,27 @@ public class ConexaoService extends Service {
 		@Override
 		protected Boolean doInBackground(String... params) {
 			boolean sucesso = false;
-			try {
-				MobileFacade facade = MobileFacade.getInstance(getApplicationContext());
-				// pega nova lista de midias do servidor
-				String boardSerial = params[0];
-				String identificador = params[1];
-				JSONArray arr = facade.registraBoard(boardSerial, identificador);
+			
+			MobileFacade facade = MobileFacade.getInstance(getApplicationContext());
+			// pega nova lista de midias do servidor
+			String boardSerial = params[0];
+			String identificador = params[1];
+			//String strDataHoraPlaylist = params[2];
+			Playlist p = facade.registraBoard(boardSerial, identificador);
+			
+			// se o playlist foi atualizado então faz o download das midias e 
+			// informa a o player que houve mudanças (sucesso = true)
+			if (p.isAtualizado()){
 				
-				for (int i=0; i<arr.length(); i++) {
-					JSONObject o = arr.getJSONObject(i);
-					final String idMidia = o.getString("id");
-					final String nomeArquivo = o.getString("nomeArquivo");
-					facade.downloadMidia(idMidia, nomeArquivo);
+				facade.apagaTodosArquivosDaPastaTemp();
+				
+				for (Midia m : p.getMidias()) {
+					facade.downloadMidia(m.getId().toString(), m.getNomeArquivo());
 				}
 				
-				if (arr.length() > 0)
-					sucesso = true;
-				//	facade.moveArquivosPlaylist();
-				
-			} catch (JSONException e) {
-				Log.e(MobileMediaHelper.TAG, "Erro no dowload de midias", e);
+				sucesso = true;
 			}
+			
 			return sucesso;
 		}
 		

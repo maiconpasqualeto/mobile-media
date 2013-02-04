@@ -11,11 +11,14 @@ import java.io.IOException;
 import org.apache.http.message.BasicNameValuePair;
 import org.json.JSONArray;
 import org.json.JSONException;
+import org.json.JSONObject;
 
 import android.content.Context;
 import android.util.Log;
 import br.com.sixtec.MobileMedia.persistencia.MMConfiguracao;
+import br.com.sixtec.MobileMedia.persistencia.Midia;
 import br.com.sixtec.MobileMedia.persistencia.MobileMediaDAO;
+import br.com.sixtec.MobileMedia.persistencia.Playlist;
 import br.com.sixtec.MobileMedia.utils.MobileMediaHelper;
 import br.com.sixtec.MobileMedia.webservice.ConexaoRest;
 
@@ -87,28 +90,84 @@ public class MobileFacade {
 		
 	}
 	
-	public JSONArray registraBoard(String boardSerial, String identificador) {
+	public void apagaTodosArquivosDaPastaTemp(){
+		String tempPath = MobileMediaHelper.DIRETORIO_TEMPORARIO;
+		File dir = new File(tempPath);
+		
+		if (!dir.exists())
+			return;
+		
+		// apaga todos os arquivos de midia que existirem na pasta temp
+		FilenameFilter fnf = new FilenameFilter() {
+			@Override
+			public boolean accept(File dir, String filename) {
+				return filename.endsWith(MobileMediaHelper.EXTENSAO_ARQUIVO_MIDIA);
+			}
+		};
+		File[] arsMidia = dir.listFiles(fnf);
+		for (int i=0; i<arsMidia.length; i++){
+			File arq = arsMidia[i];
+			Log.d(TAG, "Arquivo deletado: " + arq.getPath() + "/" + arq.getName());
+			arq.delete();
+		}
+	}
+	
+	/**
+	 * Método utilizado dentro de uma thread
+	 * 
+	 * @param boardSerial
+	 * @param identificador
+	 * @param strDataHoraPlaylist
+	 * @return
+	 */
+	public Playlist registraBoard(String boardSerial, String identificador) {
 		String nomeRest = "board/registraboard";
 		BasicNameValuePair p1 = new BasicNameValuePair("boardSerial", boardSerial);
 		BasicNameValuePair p2 = new BasicNameValuePair("identificador", identificador);
 		
-		JSONArray arr = null;
+		Playlist p = null;
 		
 		byte[] b = conn.postREST(retornaHost(), nomeRest, p1, p2);
 		if (b == null) {
-			arr = new JSONArray();
-			return arr;
+			p = new Playlist();
+			return p;
 		}
 		
 		String result = new String(b);
 				
 		try {
-			arr = new JSONArray(result);
+			JSONObject obj = new JSONObject(result);
+			JSONObject jPlaylist = obj.getJSONObject("playlist");
+			JSONArray jMidias = obj.getJSONArray("midias");
+			p = new Playlist(jPlaylist);
+			for (int i=0; i<jMidias.length(); i++) {
+				JSONObject jMidia = jMidias.getJSONObject(i);
+				Midia m = new Midia(jMidia);
+				p.getMidias().add(m);
+			}
+			
+			MobileMediaDAO dao = MobileMediaDAO.getInstance(ctx);
+			MMConfiguracao c = dao.buscaConfiguracao();
+			String strPlaylist = p.getDataHoraCriacao() != null ?
+					MobileMediaHelper.JSON_DATE_FORMAT.format(p.getDataHoraCriacao()) : "";
+			String strDataHoraPlaylist = c.getDataHoraPlaylist() != null ?
+					MobileMediaHelper.JSON_DATE_FORMAT.format(c.getDataHoraPlaylist()) : "";
+			
+			// se a lista de mídias não estiver vazio e se a data do playlist for diferente da que 
+			// recebeu do servidor, então o playlist deve ser atualizado.
+			if ( (!p.getMidias().isEmpty()) &&
+					(!strDataHoraPlaylist.equals(strPlaylist)) ) {
+				
+				// atualiza o banco com a configuração
+				c.setDataHoraPlaylist(p.getDataHoraCriacao());
+				dao.alterarConfiguracao(c);
+				p.setAtualizado(true);
+			}
 			
 		} catch (JSONException e) {
 			Log.e(TAG, "Erro ao fazer parsing do JSON", e);
 		}
-		return arr;
+		return p;
 	}
 	
 	public void moveArquivosPlaylist(){

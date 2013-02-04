@@ -27,12 +27,12 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.os.Messenger;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
-import android.widget.Toast;
 import br.com.sixtec.MobileMedia.facade.MobileFacade;
 import br.com.sixtec.MobileMedia.persistencia.MMConfiguracao;
 import br.com.sixtec.MobileMedia.persistencia.MobileMediaDAO;
@@ -52,7 +52,7 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     private static final int ID_INTENT_CONFIG = 100;
     
     private MediaPlayer mp;
-    private SurfaceView mPreview;
+    //private SurfaceView mPreview;
     private SurfaceHolder holder;
     
     private List<String> arquivos;
@@ -60,35 +60,43 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     
     // wifi
     private BroadcastReceiver receiver;
-    private String ssidRede = null;
-    private String passRede = null;
+    //private String ssidRede = null;
+    //private String passRede = null;
     private boolean receiverRegistrado = false;
     
     private final int INTERVALO = 60000; // 1 minuto
     
     private PendingIntent pi = null;
-    private Messenger messenger = new Messenger(new ServiceReturnHandle());
+    private final Messenger messenger = new Messenger(new ServiceReturnHandle());
     
     private static boolean novosArquivos = false;
+    
+    private static String serial = null;
+    
+    private MMConfiguracao conf = null;
 
     /**
-     * Called when the activity is first created.
+     * 
      */
-    public void onCreate(Bundle icicle) {
-        super.onCreate(icicle);
-
+    public void onCreate(Bundle bundle) {
+        super.onCreate(bundle);
+        
         setContentView(R.layout.player_full);
         
-        atualizarListaArquivos();
-    	
-    	mPreview = (SurfaceView) findViewById(R.id.newSurface);
-        criaSurfaceEMediaPlayer(mPreview);
-    	
+        // guarda o serial do device
+        serial = Settings.Secure.getString(getApplicationContext().getContentResolver(),
+                Settings.System.ANDROID_ID);
+        
+        Log.v(MobileMediaHelper.TAG, "Device Serial: " + serial);
+                
+        SurfaceView sPreview = (SurfaceView) findViewById(R.id.newSurface);
+        criaSurfaceEMediaPlayer(sPreview);
+        
         atualizarListaArquivos();
         
-    	defineArquivoParaExecucao(mp);
-    	
         atualizaConfigRede();
+    	
+    	defineArquivoParaExecucao(mp);
         
         receivers();
         
@@ -98,6 +106,12 @@ public class PlayerActivity extends Activity implements OnErrorListener,
 	private void registraServicoDownload() {
 		Intent it = new Intent(this, AlarmReceiver.class);
 		it.putExtra("messenger", messenger);
+		it.putExtra("serial", serial);
+		it.putExtra("identificar", conf.getIdentificador());
+//		String strDataHoraPlaylist = 
+//				conf.getDataHoraPlaylist() != null ? 
+//						MobileMediaHelper.JSON_DATE_FORMAT.format(conf.getDataHoraPlaylist()) : "";
+//		it.putExtra("strDataHoraPlaylist", strDataHoraPlaylist);
 		pi = PendingIntent.getBroadcast(
 				this, AlarmReceiver.ALARM_RECEIVER_REQUEST_CODE, 
 				it, PendingIntent.FLAG_CANCEL_CURRENT);
@@ -113,13 +127,13 @@ public class PlayerActivity extends Activity implements OnErrorListener,
 	}
 
 	/**
-	 * @param mPreview2
+	 * @param sPreview
 	 */
-	private void criaSurfaceEMediaPlayer(SurfaceView mPreview2) {
+	private void criaSurfaceEMediaPlayer(SurfaceView sPreview) {
 		// Set the transparency
         getWindow().setFormat(PixelFormat.TRANSPARENT);
 		
-		holder = mPreview.getHolder();
+		holder = sPreview.getHolder();
         holder.addCallback(this);
         // Não tirar essa linha, resolve o problema do erro (1, -38)
         holder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
@@ -207,14 +221,15 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     public void onPrepared(MediaPlayer mediaplayer) {
         Log.d(TAG, "onPrepared called");
         // play
-        mPreview.requestFocus();
+        //mPreview.requestFocus();
         mediaplayer.start();
     }
 
     public void surfaceCreated(SurfaceHolder surfaceholder) {
         Log.d(TAG, "surfaceCreated called");
         mp.setDisplay(surfaceholder);
-        prepareToPlay();
+        if (!arquivos.isEmpty())
+        	prepareToPlay();
     }
 
     public void surfaceChanged(SurfaceHolder surfaceholder, int i, int j, int k) {
@@ -229,12 +244,13 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     @Override
     protected void onStart() {
     	super.onStart();
+    	Log.e(TAG, "On Restart called");
     }
     
     @Override
     protected void onResume() {
     	super.onResume();
-    	
+    	Log.e(TAG, "On Resume called");
     	if (!receiverRegistrado) {
 			IntentFilter f = new IntentFilter();
 			f.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
@@ -251,6 +267,7 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     @Override
     protected void onPause() {
     	super.onPause();
+    	Log.e(TAG, "On Pause called");
     	
     	if (receiverRegistrado) {
 			unregisterReceiver(receiver);
@@ -265,6 +282,7 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     @Override
     protected void onRestart() {
     	super.onRestart();
+    	Log.e(TAG, "On Restart called");
     	
     	atualizaConfigRede();
     }
@@ -272,6 +290,8 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     @Override
     protected void onDestroy() {
     	super.onDestroy();
+    	Log.e(TAG, "On Destroy called");
+    	
     	mp.release();
         mp = null;
         cancelServicoDownload();
@@ -282,14 +302,12 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     public void receivers(){
 		WifiManager wifi = (WifiManager) getSystemService(Context.WIFI_SERVICE);
 		if (receiver == null)
-			receiver = new WifiReceiver(wifi, ssidRede, passRede);
+			receiver = new WifiReceiver(wifi, conf.getSsid(), conf.getPass());
 		
 	}
     
     private void atualizaConfigRede(){
-        MMConfiguracao conf = MobileMediaDAO.getInstance(this).buscaConfiguracao();
-        ssidRede = conf.getSsid();
-        passRede = conf.getPass();
+        conf = MobileMediaDAO.getInstance(this).buscaConfiguracao();
     }
     
     // métodos da Activity
@@ -319,20 +337,6 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     	}
     }
     
-    private static class ServiceReturnHandle extends Handler {
-    	
-    	@Override
-    	public void handleMessage(Message msg) {
-    		Boolean sucessoDownload = (Boolean) msg.obj;
-    		Log.d(MobileMediaHelper.TAG, 
-    				"retornou resultado SERVICE para Activity: " + msg.obj);
-    		if (sucessoDownload) {    			
-    			novosArquivos = true;
-    		}
-    			
-    	}
-    }
-    
     private void atualizarListaArquivos() {
     	MobileFacade.getInstance(this).moveArquivosPlaylist();
     	
@@ -355,4 +359,25 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     	
     	indexArquivo = -1;
 	}
+    
+    
+    /**
+     * Classe privada para implementar o Handler
+     * @author maicon
+     *
+     */
+    private class ServiceReturnHandle extends Handler {
+    	
+    	@Override
+    	public void handleMessage(Message msg) {
+    		Boolean sucessoDownload = (Boolean) msg.obj;
+    		Log.d(MobileMediaHelper.TAG, 
+    				"retornou resultado SERVICE para Activity: " + msg.obj);
+    		if (sucessoDownload) {
+    			novosArquivos = true;
+    			atualizaConfigRede();
+    		}
+    			
+    	}
+    }
 }
