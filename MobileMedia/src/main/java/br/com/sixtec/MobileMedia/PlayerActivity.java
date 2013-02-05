@@ -74,6 +74,10 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     private static String serial = null;
     
     private MMConfiguracao conf = null;
+    
+    /*private boolean pausado = false;
+    
+    private boolean surfaceCreated = false;*/
 
     /**
      * 
@@ -108,10 +112,7 @@ public class PlayerActivity extends Activity implements OnErrorListener,
 		it.putExtra("messenger", messenger);
 		it.putExtra("serial", serial);
 		it.putExtra("identificar", conf.getIdentificador());
-//		String strDataHoraPlaylist = 
-//				conf.getDataHoraPlaylist() != null ? 
-//						MobileMediaHelper.JSON_DATE_FORMAT.format(conf.getDataHoraPlaylist()) : "";
-//		it.putExtra("strDataHoraPlaylist", strDataHoraPlaylist);
+
 		pi = PendingIntent.getBroadcast(
 				this, AlarmReceiver.ALARM_RECEIVER_REQUEST_CODE, 
 				it, PendingIntent.FLAG_CANCEL_CURRENT);
@@ -221,7 +222,6 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     public void onPrepared(MediaPlayer mediaplayer) {
         Log.d(TAG, "onPrepared called");
         // play
-        //mPreview.requestFocus();
         mediaplayer.start();
     }
 
@@ -230,6 +230,7 @@ public class PlayerActivity extends Activity implements OnErrorListener,
         mp.setDisplay(surfaceholder);
         if (!arquivos.isEmpty())
         	prepareToPlay();
+        
     }
 
     public void surfaceChanged(SurfaceHolder surfaceholder, int i, int j, int k) {
@@ -244,13 +245,7 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     @Override
     protected void onStart() {
     	super.onStart();
-    	Log.e(TAG, "On Restart called");
-    }
-    
-    @Override
-    protected void onResume() {
-    	super.onResume();
-    	Log.e(TAG, "On Resume called");
+    	Log.e(TAG, "On Start called");
     	if (!receiverRegistrado) {
 			IntentFilter f = new IntentFilter();
 			f.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
@@ -261,22 +256,35 @@ public class PlayerActivity extends Activity implements OnErrorListener,
 			registerReceiver(receiver, f);
 			receiverRegistrado = true;
 		}
+    }
+    
+    @Override
+    protected void onResume() {
+    	super.onResume();
+    	Log.e(TAG, "On Resume called");
     	
     }
     
     @Override
     protected void onPause() {
     	super.onPause();
-    	Log.e(TAG, "On Pause called");
+    	Log.e(TAG, "On Pause called");    	
+    }
+    
+    /* (non-Javadoc)
+     * @see android.app.Activity#onStop()
+     */
+    @Override
+    protected void onStop() {
+    	super.onStop();
+    	Log.e(TAG, "On Stop called");
     	
     	if (receiverRegistrado) {
 			unregisterReceiver(receiver);
 			receiverRegistrado = false;
 		}
-    	
-    	if (mp.isPlaying()) 
+    	if (mp.isPlaying())
     		mp.stop();
-    	
     }
     
     @Override

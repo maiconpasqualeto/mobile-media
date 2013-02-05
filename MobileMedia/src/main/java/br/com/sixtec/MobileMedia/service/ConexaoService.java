@@ -3,9 +3,6 @@
  */
 package br.com.sixtec.MobileMedia.service;
 
-import java.io.File;
-import java.io.FilenameFilter;
-
 import android.app.Service;
 import android.content.Intent;
 import android.os.AsyncTask;
@@ -38,7 +35,6 @@ public class ConexaoService extends Service {
 		
 		String serial = intent.getStringExtra("serial");
 		String identifidor = intent.getStringExtra("identificador");
-		//String strDataHoraPlaylist = intent.getStringExtra("strDataHoraPlaylist");
 		
 		this.task = new DownloadTask();
 		this.task.execute(serial, identifidor);
@@ -94,6 +90,9 @@ public class ConexaoService extends Service {
 				Log.e(MobileMediaHelper.TAG, 
 						"Erro ao enviar mensagem do service para activity", e);
 			}
+			
+			ConexaoService.this.stopSelf();
+			task.cancel(true);
 		}
 		
 	}

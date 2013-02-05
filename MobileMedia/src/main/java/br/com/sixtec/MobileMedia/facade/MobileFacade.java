@@ -156,9 +156,12 @@ public class MobileFacade {
 			// se a lista de mídias não estiver vazio e se a data do playlist for diferente da que 
 			// recebeu do servidor, então o playlist deve ser atualizado.
 			if ( (!p.getMidias().isEmpty()) &&
-					(!strDataHoraPlaylist.equals(strPlaylist)) ) {
+					( (c.getIdPlaylist() == null) || 
+						(!p.getId().equals(c.getIdPlaylist())) || 
+						(!strDataHoraPlaylist.equals(strPlaylist)) ) ) {
 				
 				// atualiza o banco com a configuração
+				c.setIdPlaylist(p.getId());
 				c.setDataHoraPlaylist(p.getDataHoraCriacao());
 				dao.alterarConfiguracao(c);
 				p.setAtualizado(true);

@@ -45,6 +45,7 @@ public class MobileMediaDAO {
 		v.put("ssid", c.getSsid());
 		v.put("pass", c.getPass());
 		v.put("identificador", c.getIdentificador());
+		v.put("id_playlist", c.getIdPlaylist());
 		v.put("data_hora_playlist", c.getDataHoraPlaylistStringSQLite());
 		
 		String clausulaWhere = "_id=?";
@@ -62,7 +63,8 @@ public class MobileMediaDAO {
 		SQLiteDatabase db = dbman.getReadableDatabase();
 		MMConfiguracao conf = null;
 		Cursor c = db.query(DatabaseManager.TABLE_NAME, 
-				new String[] {"_id", "ip", "porta", "ssid", "pass", "identificador", "data_hora_playlist"}, 
+				new String[] {"_id", "ip", "porta", "ssid", "pass", 
+					"identificador", "id_playlist", "data_hora_playlist"}, 
 				null, null, null, null, null);
 		
 		if (c.moveToFirst()) {
@@ -73,7 +75,8 @@ public class MobileMediaDAO {
 			String ssid = c.getString(3);
 			String pass = c.getString(4);
 			String identificador = c.getString(5);
-			String strDataHoraPlaylist = c.getString(6);
+			Long idPlaylist = c.getLong(6);
+			String strDataHoraPlaylist = c.getString(7);
 			
 			
 			conf = new MMConfiguracao();
@@ -83,6 +86,7 @@ public class MobileMediaDAO {
 			conf.setSsid(ssid);
 			conf.setPass(pass);
 			conf.setIdentificador(identificador);
+			conf.setIdPlaylist(idPlaylist);
 			conf.setDataHoraPlaylistStringSQLite(strDataHoraPlaylist);
 						
 		}

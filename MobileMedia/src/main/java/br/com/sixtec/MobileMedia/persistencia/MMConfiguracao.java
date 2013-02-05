@@ -27,6 +27,8 @@ public class MMConfiguracao {
 	
 	private String identificador;
 	
+	private Long idPlaylist;
+	
 	private Date dataHoraPlaylist;
 
 	public Long getId() {
@@ -85,6 +87,14 @@ public class MMConfiguracao {
 		this.dataHoraPlaylist = dataHoraPlaylist;
 	}
 	
+	public Long getIdPlaylist() {
+		return idPlaylist;
+	}
+
+	public void setIdPlaylist(Long idPlaylist) {
+		this.idPlaylist = idPlaylist;
+	}
+
 	public String getDataHoraPlaylistStringSQLite(){
 		if (getDataHoraPlaylist() == null)
 			return "";

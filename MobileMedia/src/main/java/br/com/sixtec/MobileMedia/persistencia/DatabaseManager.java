@@ -21,11 +21,14 @@ public class DatabaseManager extends SQLiteOpenHelper {
 			"ip TEXT, " +
 			"porta INTEGER, " +
 			"ssid TEXT, " +
-			"pass TEXT);";
+			"pass TEXT, " +
+			"identificador TEXT, " +
+			"id_playlist TEXT, " +
+			"data_hora_playlist TEXT);";
 	
 	private static final String NOME_BANCO = "mobile_media_db";
 	
-	private static final int VERSAO_BANCO = 3;
+	private static final int VERSAO_BANCO = 1;
 
 	/**
 	 * @param context
@@ -42,21 +45,13 @@ public class DatabaseManager extends SQLiteOpenHelper {
 		db.execSQL(SCRIPT_CREATE_DB);
 		// setando a configuração padrão
 		db.execSQL("INSERT INTO " + TABLE_NAME + 
-				" ('ip', 'porta', 'ssid', 'pass') values " +
-				" ('10.1.1.104', 8080, 'Ma & Ma', 'a0b1c2d3e4')");
+				" ('ip', 'porta', 'ssid', 'pass', 'identificador') values " +
+				" ('10.1.1.104', 8080, 'Ma & Ma', 'a0b1c2d3e4', 'board default')");
 	}
 	
 	@Override
 	public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-		if (oldVersion == 1 && newVersion > 1) {
-			String sql = "ALTER TABLE " + TABLE_NAME + " ADD COLUMN identificador TEXT";
-			db.execSQL(sql);
-		} 
-		if (newVersion > 2) {
-			String sql = "ALTER TABLE " + TABLE_NAME + " ADD COLUMN data_hora_playlist TEXT";
-			db.execSQL(sql);
-		}
-
+		
 	}
 
 }

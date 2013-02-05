@@ -28,7 +28,6 @@ public class AlarmReceiver extends BroadcastReceiver {
         serviceIntent.putExtra("serial", it.getStringExtra("serial"));
         serviceIntent.putExtra("identificador", it.getStringExtra("identificador"));
         serviceIntent.putExtra("messenger", (Messenger) it.getParcelableExtra("messenger"));
-        //serviceIntent.putExtra("strDataHoraPlaylist", it.getStringExtra("strDataHoraPlaylist"));
     	ctx.startService(serviceIntent);
 	}
 

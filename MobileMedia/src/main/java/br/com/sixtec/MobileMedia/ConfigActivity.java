@@ -3,13 +3,13 @@
  */
 package br.com.sixtec.MobileMedia;
 
-import br.com.sixtec.MobileMedia.persistencia.MMConfiguracao;
-import br.com.sixtec.MobileMedia.persistencia.MobileMediaDAO;
 import android.app.Activity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import br.com.sixtec.MobileMedia.persistencia.MMConfiguracao;
+import br.com.sixtec.MobileMedia.persistencia.MobileMediaDAO;
 
 /**
  * @author maicon
@@ -76,6 +76,31 @@ public class ConfigActivity extends Activity {
 		txtSenha.setText(c.getPass());
 		txtIdentificador.setText(c.getIdentificador());
 		
+				
+		/*try {
+			Process proc = Runtime.getRuntime().exec(
+					new String[]{"su","-c","service call activity 79 s16 com.android.systemui"});
+			proc.waitFor();
+		} catch (IOException e) {
+			Log.e(MobileMediaHelper.TAG, "Erro ao chamar processo sistema", e);
+		} catch (InterruptedException e) {
+			Log.e(MobileMediaHelper.TAG, "Erro de interrupção do processo", e);
+		}*/
+		
+	}
+	
+	@Override
+	protected void onDestroy() {
+		super.onDestroy();
+		/*try {
+			Process proc = Runtime.getRuntime().exec(
+					new String[]{"am","startservice","-n","com.android.systemui/.SystemUIService"});
+			proc.waitFor();
+		} catch (IOException e) {
+			Log.e(MobileMediaHelper.TAG, "Erro ao chamar processo sistema", e);
+		} catch (InterruptedException e) {
+			Log.e(MobileMediaHelper.TAG, "Erro de interrupção do processo", e);
+		}*/
 	}
 
 }
