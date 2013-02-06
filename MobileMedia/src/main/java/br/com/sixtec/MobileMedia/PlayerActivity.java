@@ -33,6 +33,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+import android.view.WindowManager;
 import br.com.sixtec.MobileMedia.facade.MobileFacade;
 import br.com.sixtec.MobileMedia.persistencia.MMConfiguracao;
 import br.com.sixtec.MobileMedia.persistencia.MobileMediaDAO;
@@ -85,6 +86,8 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     public void onCreate(Bundle bundle) {
         super.onCreate(bundle);
         
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        
         setContentView(R.layout.player_full);
         
         // guarda o serial do device
@@ -95,6 +98,9 @@ public class PlayerActivity extends Activity implements OnErrorListener,
                 
         SurfaceView sPreview = (SurfaceView) findViewById(R.id.newSurface);
         criaSurfaceEMediaPlayer(sPreview);
+        
+        // android 4
+        //getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LOW_PROFILE);
         
         atualizarListaArquivos();
         

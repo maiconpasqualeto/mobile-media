@@ -11,11 +11,13 @@
 	    android:normalScreens="true" 
 	    android:largeScreens="true" 
 	    android:anyDensity="true" />
-<uses-sdk android:minSdkVersion="5"/>
+<uses-sdk android:minSdkVersion="5" />
 <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
 
   <application android:icon="@drawable/icon" android:label="@string/app_name">
     <activity android:name=".HelloAndroidActivity"></activity>
+    <!--Android 4 <activity android:name="PlayerActivity"
+        android:theme="@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen"> -->
     <activity android:name="PlayerActivity"
         android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
       <intent-filter>
