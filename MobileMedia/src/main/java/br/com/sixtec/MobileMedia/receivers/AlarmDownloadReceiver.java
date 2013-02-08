@@ -15,14 +15,14 @@ import br.com.sixtec.MobileMedia.utils.MobileMediaHelper;
  * @author maicon
  *
  */
-public class AlarmReceiver extends BroadcastReceiver {
+public class AlarmDownloadReceiver extends BroadcastReceiver {
 	
 	public static final int ALARM_RECEIVER_REQUEST_CODE = 200;
 	
 
 	@Override
 	public void onReceive(Context ctx, Intent it) {
-		Log.d(MobileMediaHelper.TAG, "Receiver Alarm.");
+		Log.d(MobileMediaHelper.TAG, "[AlarmDownloadReceiver] Chama serviço Download.");
 		
         Intent serviceIntent = new Intent(ctx, ConexaoService.class);
         serviceIntent.putExtra("serial", it.getStringExtra("serial"));

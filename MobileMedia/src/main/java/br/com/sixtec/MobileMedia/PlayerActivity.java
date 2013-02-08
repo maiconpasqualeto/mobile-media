@@ -12,7 +12,6 @@ import java.util.List;
 import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -28,17 +27,18 @@ import android.os.Handler;
 import android.os.Message;
 import android.os.Messenger;
 import android.provider.Settings;
+import android.util.AndroidException;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.WindowManager;
+import android.widget.Toast;
 import br.com.sixtec.MobileMedia.facade.MobileFacade;
 import br.com.sixtec.MobileMedia.persistencia.MMConfiguracao;
 import br.com.sixtec.MobileMedia.persistencia.MobileMediaDAO;
-import br.com.sixtec.MobileMedia.receivers.AlarmReceiver;
-import br.com.sixtec.MobileMedia.receivers.WifiReceiver;
+import br.com.sixtec.MobileMedia.receivers.WifiManagerReceiver;
 import br.com.sixtec.MobileMedia.utils.MobileMediaHelper;
 /**
  * @author maicon
@@ -60,14 +60,17 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     private int indexArquivo = -1; 
     
     // wifi
-    private BroadcastReceiver receiver;
+    private WifiManagerReceiver receiver;
     //private String ssidRede = null;
     //private String passRede = null;
     private boolean receiverRegistrado = false;
     
-    private final int INTERVALO = 60000; // 1 minuto
+    private final int INTERVALO_SERVICO_DOWNLOAD = 60000; // 1 minuto
     
-    private PendingIntent pi = null;
+    private final int INTERVALO_SERVICO_SCAN_WIFI = 60000; // 1 minuto
+    
+    private PendingIntent piDownload = null;
+    private PendingIntent piWifi = null;
     private final Messenger messenger = new Messenger(new ServiceReturnHandle());
     
     private static boolean novosArquivos = false;
@@ -106,31 +109,33 @@ public class PlayerActivity extends Activity implements OnErrorListener,
         
         atualizaConfigRede();
     	
-    	defineArquivoParaExecucao(mp);
+    	//defineArquivoParaExecucao(mp);
         
         receivers();
         
         registraServicoDownload();
+        
     }
     
 	private void registraServicoDownload() {
-		Intent it = new Intent(this, AlarmReceiver.class);
+		/*Intent it = new Intent(this, AlarmDownloadReceiver.class);
 		it.putExtra("messenger", messenger);
 		it.putExtra("serial", serial);
-		it.putExtra("identificar", conf.getIdentificador());
+		it.putExtra("identificar", conf.getIdentificador());*/
 
-		pi = PendingIntent.getBroadcast(
-				this, AlarmReceiver.ALARM_RECEIVER_REQUEST_CODE, 
-				it, PendingIntent.FLAG_CANCEL_CURRENT);
-		AlarmManager alarm = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-		// Começa contar o tempo a partir de agora
-		alarm.setRepeating(AlarmManager.RTC, System.currentTimeMillis(), INTERVALO, pi);
+		/*piDownload = PendingIntent.getBroadcast(
+				this, AlarmDownloadReceiver.ALARM_RECEIVER_REQUEST_CODE, 
+				it, PendingIntent.FLAG_CANCEL_CURRENT);*/
+		//AlarmManager alarm = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+		// Começa contar o tempo a partir de 15 segundos
+		//alarm.setRepeating(AlarmManager.RTC, System.currentTimeMillis()+15000, INTERVALO_SERVICO_DOWNLOAD, piDownload);
 		
 	}
-	
+		
 	private void cancelServicoDownload(){
 		AlarmManager alarm = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-		alarm.cancel(pi);
+		alarm.cancel(piDownload);
+		alarm.cancel(piWifi);
 	}
 
 	/**
@@ -234,8 +239,10 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     public void surfaceCreated(SurfaceHolder surfaceholder) {
         Log.d(TAG, "surfaceCreated called");
         mp.setDisplay(surfaceholder);
-        if (!arquivos.isEmpty())
+        if (!arquivos.isEmpty()) {
+        	defineArquivoParaExecucao(mp);
         	prepareToPlay();
+        }
         
     }
 
@@ -289,8 +296,10 @@ public class PlayerActivity extends Activity implements OnErrorListener,
 			unregisterReceiver(receiver);
 			receiverRegistrado = false;
 		}
-    	if (mp.isPlaying())
+    	if (mp.isPlaying()) {
     		mp.stop();
+    		mp.reset();    		
+    	}
     }
     
     @Override
@@ -298,7 +307,7 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     	super.onRestart();
     	Log.e(TAG, "On Restart called");
     	
-    	atualizaConfigRede();
+    	//atualizaConfigRede();
     }
     
     @Override
@@ -314,10 +323,19 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     
     // métodos do Wifi
     public void receivers(){
-		WifiManager wifi = (WifiManager) getSystemService(Context.WIFI_SERVICE);
-		if (receiver == null)
-			receiver = new WifiReceiver(wifi, conf.getSsid(), conf.getPass());
-		
+    	try {
+			WifiManager wifi = (WifiManager) getSystemService(Context.WIFI_SERVICE);
+			//receiver = new WifiReceiver(wifi, conf.getSsid(), conf.getPass());
+			receiver = new WifiManagerReceiver(wifi, conf.getSsid(), conf.getPass());
+    	} catch (InterruptedException e) {
+    		Log.e(MobileMediaHelper.TAG, "Erro de interrupção ao ligar o wifi", e);
+    		Toast.makeText(this, "Erro de interrupção ao ligar o wifi", Toast.LENGTH_LONG)
+    		.show();
+    	} catch (AndroidException e) {
+    		Log.e(MobileMediaHelper.TAG, e.getLocalizedMessage(), e);
+    		Toast.makeText(this, e.getLocalizedMessage(), Toast.LENGTH_LONG)
+    		.show();
+		}
 	}
     
     private void atualizaConfigRede(){
@@ -347,6 +365,20 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     			resultCode == RESULT_OK){
     		
     		// Fazer sincronia com o WS e startar o download Midias.
+    		String ssid = data.getStringExtra("ssid");
+    		String senha = data.getStringExtra("senha");
+    		
+    		String ssidOld = conf.getSsid();
+    		String senhaOld = conf.getPass();
+    		
+    		atualizaConfigRede();
+    		//receivers();
+    		
+    		if (!ssidOld.equals(ssid) ||
+    				!senhaOld.equals(senha)) {
+    			receiver.atualizaConfiguracaoRede(this, ssid, senha);
+    			
+    		}
     		
     	}
     }
@@ -388,8 +420,7 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     		Log.d(MobileMediaHelper.TAG, 
     				"retornou resultado SERVICE para Activity: " + msg.obj);
     		if (sucessoDownload) {
-    			novosArquivos = true;
-    			atualizaConfigRede();
+    			novosArquivos = true;    			
     		}
     			
     	}

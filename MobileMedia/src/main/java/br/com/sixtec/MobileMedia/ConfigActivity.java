@@ -4,6 +4,7 @@
 package br.com.sixtec.MobileMedia;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -64,7 +65,12 @@ public class ConfigActivity extends Activity {
 				
 				MobileMediaDAO.getInstance(ConfigActivity.this).alterarConfiguracao(c);
 				
-				setResult(RESULT_OK);
+				Intent itResul = new Intent();
+				itResul.putExtra("ssid", ssid);
+				itResul.putExtra("ip", ip);
+				itResul.putExtra("senha", senha);
+				
+				setResult(RESULT_OK, itResul);
 				finish();
 			}
 		});

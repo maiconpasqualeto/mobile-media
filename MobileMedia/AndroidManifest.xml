@@ -32,7 +32,7 @@
         </intent-filter>
     </service>
     <activity android:name="ConfigActivity"></activity>
-    <receiver android:name=".receivers.AlarmReceiver"></receiver>
+    <receiver android:name="br.com.sixtec.MobileMedia.receivers.AlarmDownloadReceiver"></receiver>
   </application>
 
 </manifest>

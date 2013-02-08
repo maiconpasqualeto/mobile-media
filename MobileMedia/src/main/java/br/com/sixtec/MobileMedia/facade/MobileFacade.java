@@ -182,6 +182,9 @@ public class MobileFacade {
 		};
 		// se não tiver arquivos temporários não faz nada
 		File dirTemp = new File(MobileMediaHelper.DIRETORIO_TEMPORARIO);
+		if (!dirTemp.exists())
+			return;
+		
 		File[] arqsTemp = dirTemp.listFiles(fnf);
 		if (arqsTemp.length == 0)
 			return;

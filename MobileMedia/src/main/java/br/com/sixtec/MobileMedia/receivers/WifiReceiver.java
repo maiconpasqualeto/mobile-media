@@ -36,8 +36,8 @@ public class WifiReceiver extends BroadcastReceiver {
 		this.wifi = wifi;
 		
 		// habilita o rádio wifi
-		//if (!wifi.isWifiEnabled())
-		//	wifi.setWifiEnabled(true);
+		if (!wifi.isWifiEnabled())
+			wifi.setWifiEnabled(true);
 	}
 	
 	public String getSsidRede() {
@@ -58,34 +58,38 @@ public class WifiReceiver extends BroadcastReceiver {
 
 	@Override
 	public void onReceive(Context ctx, Intent intent) {
-		Log.d(TAG, "Receiver: " + intent.getAction());
+		Log.d(TAG, "[onReceive] Receiver: " + intent.getAction());
 		if (WifiManager.SCAN_RESULTS_AVAILABLE_ACTION.equals(intent.getAction())) {
-			Log.d(TAG, "Scan results avalilable");
+			Log.d(TAG, "[onReceive] SCAN_RESULTS_AVAILABLE_ACTION");
 			
 			conectaRedeWifi();
         }
         else if (WifiManager.WIFI_STATE_CHANGED_ACTION.equals(intent.getAction())) {			        	
         	int wifiState = intent.getIntExtra(WifiManager.EXTRA_WIFI_STATE, 0);
-        	Log.d(TAG, "Extra Wifi State: " + returnWifiState(wifiState));
+        	Log.d(TAG, "[onReceive] WIFI_STATE_CHANGED_ACTION");
+        	Log.d(TAG, "[onReceive] Extra Wifi State: " + returnWifiState(wifiState));
         	
         	switch(wifiState){
 				case WifiManager.WIFI_STATE_DISABLED:
-					Log.d(TAG, "Wifi desligado, ligando Wifi...");
+					Log.d(TAG, "[onReceive] WIFI_STATE_DISABLED");
+					Log.d(TAG, "[onReceive] Wifi desligado, ligando Wifi...");
 					wifi.setWifiEnabled(true);
 					//wifi.startScan();
 					break;
 				case WifiManager.WIFI_STATE_ENABLED:
+					Log.d(TAG, "[onReceive] WIFI_STATE_ENABLED");
 					conectaRedeWifi();
 					break;
         	}
         } else if (WifiManager.SUPPLICANT_STATE_CHANGED_ACTION.equals(intent.getAction())){
-        	Log.d(TAG, "Suplicate State changed. State: " + wifi.getConnectionInfo().getSupplicantState());
+        	Log.d(TAG, "[onReceive] SUPPLICANT_STATE_CHANGED_ACTION");
+        	Log.d(TAG, "[onReceive] Suplicate State changed. State: " + wifi.getConnectionInfo().getSupplicantState());
 			switch (wifi.getConnectionInfo().getSupplicantState()){
 			case INACTIVE:
 				conectaRedeWifi();
 				break;
 			case DORMANT:
-				Log.d(TAG, "Reconectando");
+				//Log.d(TAG, "Reconectando");
 				conectaRedeWifi();
 				break;
 			case SCANNING:
@@ -98,34 +102,87 @@ public class WifiReceiver extends BroadcastReceiver {
 				break;
 			}
         } else if (WifiManager.NETWORK_STATE_CHANGED_ACTION.equals(intent.getAction())) {
-	        
-			DetailedState ds = WifiInfo.getDetailedStateOf(wifi.getConnectionInfo().getSupplicantState());
-			Log.d(MobileMediaHelper.TAG, "Detailed Supplicant state: " + ds);
+        	Log.d(TAG, "[onReceive] NETWORK_STATE_CHANGED_ACTION");
+        	switch (wifi.getConnectionInfo().getSupplicantState()) {
+    		case DISCONNECTED:
+    			Log.d(MobileMediaHelper.TAG, "[onReceive] DISCONNECTED");
+    			conectaRedeWifi();
+    			break;
+    		case UNINITIALIZED:
+    			Log.d(MobileMediaHelper.TAG, "[onReceive] UNINITIALIZED");
+    			break;
+			case ASSOCIATED:
+				Log.d(MobileMediaHelper.TAG, "[onReceive] ASSOCIATED");
+				break;
+			case ASSOCIATING:
+				Log.d(MobileMediaHelper.TAG, "[onReceive] ASSOCIATING");
+				break;
+			case COMPLETED:
+				Log.d(MobileMediaHelper.TAG, "[onReceive] COMPLETED");
+				Log.d(MobileMediaHelper.TAG, "[onReceive] Network info: IP: " + 
+		        		Formatter.formatIpAddress(wifi.getConnectionInfo().getIpAddress()));
+					if (wifi.getConnectionInfo().getIpAddress() == 0) {
+						wifi.startScan();
+					}
+				break;
+			case DORMANT:
+				Log.d(MobileMediaHelper.TAG, "[onReceive] DORMANT");
+				break;
+			case FOUR_WAY_HANDSHAKE:
+				Log.d(MobileMediaHelper.TAG, "[onReceive] FOUR_WAY_HANDSHAKE");
+				break;
+			case GROUP_HANDSHAKE:
+				Log.d(MobileMediaHelper.TAG, "[onReceive] GROUP_HANDSHAKE");
+				break;
+			case INACTIVE:
+				Log.d(MobileMediaHelper.TAG, "[onReceive] INACTIVE");
+				break;
+			case INVALID:
+				Log.d(MobileMediaHelper.TAG, "[onReceive] INVALID");
+				break;
+			case SCANNING:
+				Log.d(MobileMediaHelper.TAG, "[onReceive] SCANNING");
+				break;
+			default:
+				break;
+        	}
+        	
+			/*DetailedState ds = WifiInfo.getDetailedStateOf(wifi.getConnectionInfo().getSupplicantState());
+			Log.d(MobileMediaHelper.TAG, "[onReceive] Detailed Supplicant state: " + ds);
+			*/
 			
-			Log.d(MobileMediaHelper.TAG, "Network info: IP: " + 
-	        		Formatter.formatIpAddress(wifi.getConnectionInfo().getIpAddress()));
 	        
-	        if (wifi.getConnectionInfo().getIpAddress() > 0){
+	        /*if (wifi.getConnectionInfo().getIpAddress() > 0){
 	        	//downloadDasMidias();
-	        } 
+	        } else {
+	        	//Log.d(MobileMediaHelper.TAG, "[onReceive] IP DHCP: " + Formatter.formatIpAddress(wifi.getDhcpInfo().ipAddress));
+	        }*/
         } else if (WifiManager.SCAN_RESULTS_AVAILABLE_ACTION.equals(intent.getAction())){
-        	Log.d(MobileMediaHelper.TAG, "Results available");
+        	Log.d(MobileMediaHelper.TAG, "SCAN_RESULTS_AVAILABLE_ACTION");
         }
 
 	}
 	
 	public void conectaRedeWifi(){
+		
+		Log.d(TAG, "[conectaRedeWifi] ini");
     	
 		for (WifiConfiguration r : wifi.getConfiguredNetworks()) {
     		if (("\"" + ssidRede + "\"").equals(r.SSID)) {
-    			Log.d(TAG, "A rede já existe.");
-    			if (WifiConfiguration.Status.ENABLED == r.status) {
-    				Log.d(TAG, "Não faz nada.");
+    			Log.d(TAG, "[conectaRedeWifi] A rede já existe.");
+    			if (WifiConfiguration.Status.ENABLED == r.status || 
+    					WifiConfiguration.Status.CURRENT == r.status) {
+    				// 0 - CURRENT  1 - DISABLED  2 - ENABLED
+    				Log.d(TAG, "[conectaRedeWifi] WifiConfiguration Status: " + r.status);
+    				Log.d(TAG, "[conectaRedeWifi] A Rede Já está habilitada.");
+    				//wifi.createWifiLock(WifiManager.WIFI_MODE_FULL, "[conectaRedeWifi] Wifi Lock");
+    				//wifi.reassociate();
+    				Log.d(MobileMediaHelper.TAG, "[conectaRedeWifi] IP DHCP: " + Formatter.formatIpAddress(wifi.getDhcpInfo().ipAddress));
     				return;
     			}
     			int id = r.networkId;    			
     			wifi.enableNetwork(id, true);
-    			Log.d(TAG, "Habilitou o SSID.");
+    			Log.d(TAG, "[conectaRedeWifi] Habilitou o SSID.");
     			return;
     		}    		
     	}
@@ -141,7 +198,7 @@ public class WifiReceiver extends BroadcastReceiver {
         		
         		WifiType wifiType = null;
         		
-        		Log.d(TAG, "Capabilities: " + r.capabilities);
+        		//Log.d(TAG, "Capabilities: " + r.capabilities);
         		if (r.capabilities.contains(WifiType.WEP.name()))
         			wifiType = WifiType.WEP;
         		else if (r.capabilities.contains("WPA-PSK"))
@@ -157,17 +214,39 @@ public class WifiReceiver extends BroadcastReceiver {
         		
         		int id = wifi.addNetwork(wc);
         		
-        		Log.d(TAG, "Wifi result ID:" + id);
+        		Log.d(TAG, "[conectaRedeWifi] Wifi result ID:" + id);
         		
         		// a rede foi criada com sucesso
         		if (id > -1) {
-        			wifi.saveConfiguration();
+        			//wifi.setWifiEnabled(true);
         			wifi.enableNetwork(id, true);
-	        		//wifi.setWifiEnabled(true);
+	        		wifi.saveConfiguration();
         			break;
         		}		        		
         	}
         }
+	}
+	
+	/**
+	 * Método utilizado para redefinir as configurações da senha da rede wifi
+	 * 
+	 */
+	public void redefineConfiguracoesRede(){
+		for (WifiConfiguration r : wifi.getConfiguredNetworks()) {
+    		if (("\"" + ssidRede + "\"").equals(r.SSID)) {
+    			Log.d(TAG, "[redefineConfiguracoesRede] A rede existe. reconfigura");
+    			int id = r.networkId;
+    			if (WifiConfiguration.Status.ENABLED == r.status || 
+    					WifiConfiguration.Status.CURRENT == r.status) {
+    				Log.d(TAG, "[redefineConfiguracoesRede] A Rede está habilitada, desabilitar");
+    				
+    				wifi.enableNetwork(id, false);
+    			}
+    			Log.d(TAG, "[redefineConfiguracoesRede] Remove a rede da configuração para ser re-configurada");
+    			wifi.removeNetwork(id);
+    			return;
+    		}    		
+    	}
 	}
 
 	private void desconectarWifi() {
@@ -178,6 +257,7 @@ public class WifiReceiver extends BroadcastReceiver {
 	}
 	
 	private WifiConfiguration configuraRedeWifi(WifiConfiguration wc, String pass, WifiType wifiType) {
+		Log.d(TAG, "[configuraRedeWifi] Configurando rede : " + wifiType.name());
     	switch (wifiType) {
 		case WEP:
 			wc.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.NONE);
