@@ -5,6 +5,8 @@ package br.com.sixtec.MobileMedia.receivers;
 
 import java.util.List;
 
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -12,9 +14,12 @@ import android.net.NetworkInfo;
 import android.net.wifi.ScanResult;
 import android.net.wifi.SupplicantState;
 import android.net.wifi.WifiConfiguration;
+import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.os.Messenger;
 import android.util.AndroidException;
 import android.util.Log;
+import br.com.sixtec.MobileMedia.PlayerActivity;
 import br.com.sixtec.MobileMedia.utils.MobileMediaHelper;
 
 /**
@@ -25,16 +30,29 @@ public class WifiManagerReceiver extends BroadcastReceiver {
 
 	private static final String TAG = MobileMediaHelper.TAG;
 	
+	private final int INTERVALO_SERVICO_DOWNLOAD = 60000; // 1 minuto
+	
 	private String ssid = null;
 	private String pass = null;
 	
 	private WifiConfiguration wc = null;
 	
+	private PendingIntent piDownload;
 	
-	public WifiManagerReceiver(WifiManager wm, String ssid, String pass) throws InterruptedException, AndroidException {
+	private final Messenger messenger = new Messenger(new PlayerActivity.ServiceReturnHandle());
+	
+	private String serial;
+	private String identificador;
+	
+	public WifiManagerReceiver(
+			Context ctx, WifiManager wm, String ssid, String pass, String serial, String identificador) 
+					throws InterruptedException, AndroidException {
 		
 		this.ssid = ssid;
 		this.pass = pass;
+		
+		this.serial = serial;
+		this.identificador = identificador;
 		
 		// conecta rede WIFI
 		if (!wm.isWifiEnabled())
@@ -51,9 +69,26 @@ public class WifiManagerReceiver extends BroadcastReceiver {
 			throw new AndroidException("Não foi possível startar o wifi");
 		}
 		
+		// remove outra rede conectada
+		removeRedesConectadas(ctx, wm);
+		
 		// Se a rede já estiver configurada só ativa a rede.
 		verificaRedeJaConfigurada(wm);
 		
+	}
+
+	/**
+	 * 
+	 */
+	private void removeRedesConectadas(Context ctx, WifiManager wifiManager) {
+		WifiInfo info = wifiManager.getConnectionInfo();
+		
+		if ( (info != null) && (!ssid.equals(info.getSSID())) ) {
+			int idRede = wifiManager.getConnectionInfo().getNetworkId();
+			cancelServicoDownload(ctx);
+			wifiManager.disconnect();
+			wifiManager.removeNetwork(idRede);
+		}
 	}
 
 	@Override
@@ -68,12 +103,20 @@ public class WifiManagerReceiver extends BroadcastReceiver {
 			verificaResultadosScan(wifiManager);
 			
         } else {
-        	        	
+        	
         	SupplicantState ss = intent.getParcelableExtra("newState");
         	if (ss != null) {
-        		//Log.d(TAG, "[onReceive] supplicant state: " + ss.toString());
-        		if (ss.equals(SupplicantState.DISCONNECTED)) {
+        		Log.d(TAG, "[onReceive] supplicant state: " + ss.toString());
+        		switch(ss){
+        		case DISCONNECTED:
         			Log.d(TAG, "[onReceive] DESCONECTADO ");
+        			cancelServicoDownload(ctx);
+        			break;
+        		case DORMANT: // desconexão chamada pelo wifiManager.disconnect()
+        			cancelServicoDownload(ctx);
+        			break;
+				default:
+					break;
         		}
         	}
         	int error = intent.getIntExtra("supplicantError", -1);
@@ -84,13 +127,39 @@ public class WifiManagerReceiver extends BroadcastReceiver {
         	
         	NetworkInfo ni = intent.getParcelableExtra("networkInfo");        	
         	if (ni != null) {
-        		//Log.d(TAG, "[onReceive] NI: " + ni.getExtraInfo());
-        		if (ni.isConnected())
+        		Log.d(TAG, "[onReceive] NI: " + ni.getExtraInfo());
+        		if (ni.isConnected()) {
+        			// se estiver conectado em outro ssid, remove a rede
         			Log.d(TAG, "[onReceive] CONECTADO ");
+        			registraServicoDonwload(ctx);
+        		}
         	}
         }
 		
 	}
+	
+	private void registraServicoDonwload(Context ctx){
+		Intent it = new Intent(ctx, AlarmDownloadReceiver.class);
+		it.putExtra("messenger", messenger);
+		it.putExtra("serial", serial);
+		it.putExtra("identificar", identificador);
+
+		piDownload = PendingIntent.getBroadcast(
+				ctx, AlarmDownloadReceiver.ALARM_RECEIVER_REQUEST_CODE, 
+				it, PendingIntent.FLAG_CANCEL_CURRENT);
+		AlarmManager alarm = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
+		// Começa contar o tempo a partir de 15 segundos
+		alarm.setRepeating(AlarmManager.RTC, System.currentTimeMillis()+15000, INTERVALO_SERVICO_DOWNLOAD, piDownload);
+	}
+	
+	public void cancelServicoDownload(Context ctx){
+		if (piDownload != null) {
+			AlarmManager alarm = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
+			alarm.cancel(piDownload);
+			piDownload.cancel();
+		}
+	}
+
 
 	/**
 	 * verifica se a rede com o SSID passado já está configurada, se estiver só ativa a rede

@@ -54,7 +54,6 @@ public class ConexaoService extends Service {
 		@Override
 		protected Boolean doInBackground(String... params) {
 			boolean sucesso = false;
-			
 			MobileFacade facade = MobileFacade.getInstance(getApplicationContext());
 			// pega nova lista de midias do servidor
 			String boardSerial = params[0];
@@ -74,7 +73,6 @@ public class ConexaoService extends Service {
 				
 				sucesso = true;
 			}
-			
 			return sucesso;
 		}
 		

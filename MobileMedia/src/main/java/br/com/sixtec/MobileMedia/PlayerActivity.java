@@ -10,8 +10,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import android.app.Activity;
-import android.app.AlarmManager;
-import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -25,7 +23,6 @@ import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.os.Messenger;
 import android.provider.Settings;
 import android.util.AndroidException;
 import android.util.Log;
@@ -61,18 +58,9 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     
     // wifi
     private WifiManagerReceiver receiver;
-    //private String ssidRede = null;
-    //private String passRede = null;
+    
     private boolean receiverRegistrado = false;
-    
-    private final int INTERVALO_SERVICO_DOWNLOAD = 60000; // 1 minuto
-    
-    private final int INTERVALO_SERVICO_SCAN_WIFI = 60000; // 1 minuto
-    
-    private PendingIntent piDownload = null;
-    private PendingIntent piWifi = null;
-    private final Messenger messenger = new Messenger(new ServiceReturnHandle());
-    
+        
     private static boolean novosArquivos = false;
     
     private static String serial = null;
@@ -113,31 +101,10 @@ public class PlayerActivity extends Activity implements OnErrorListener,
         
         receivers();
         
-        registraServicoDownload();
+        //registraServicoDownload();
         
     }
-    
-	private void registraServicoDownload() {
-		/*Intent it = new Intent(this, AlarmDownloadReceiver.class);
-		it.putExtra("messenger", messenger);
-		it.putExtra("serial", serial);
-		it.putExtra("identificar", conf.getIdentificador());*/
-
-		/*piDownload = PendingIntent.getBroadcast(
-				this, AlarmDownloadReceiver.ALARM_RECEIVER_REQUEST_CODE, 
-				it, PendingIntent.FLAG_CANCEL_CURRENT);*/
-		//AlarmManager alarm = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-		// Começa contar o tempo a partir de 15 segundos
-		//alarm.setRepeating(AlarmManager.RTC, System.currentTimeMillis()+15000, INTERVALO_SERVICO_DOWNLOAD, piDownload);
-		
-	}
-		
-	private void cancelServicoDownload(){
-		AlarmManager alarm = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-		alarm.cancel(piDownload);
-		alarm.cancel(piWifi);
-	}
-
+    	
 	/**
 	 * @param sPreview
 	 */
@@ -317,7 +284,7 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     	
     	mp.release();
         mp = null;
-        cancelServicoDownload();
+        receiver.cancelServicoDownload(this);
     }
     
     
@@ -326,7 +293,7 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     	try {
 			WifiManager wifi = (WifiManager) getSystemService(Context.WIFI_SERVICE);
 			//receiver = new WifiReceiver(wifi, conf.getSsid(), conf.getPass());
-			receiver = new WifiManagerReceiver(wifi, conf.getSsid(), conf.getPass());
+			receiver = new WifiManagerReceiver(this, wifi, conf.getSsid(), conf.getPass(), serial, conf.getIdentificador());
     	} catch (InterruptedException e) {
     		Log.e(MobileMediaHelper.TAG, "Erro de interrupção ao ligar o wifi", e);
     		Toast.makeText(this, "Erro de interrupção ao ligar o wifi", Toast.LENGTH_LONG)
@@ -412,7 +379,7 @@ public class PlayerActivity extends Activity implements OnErrorListener,
      * @author maicon
      *
      */
-    private class ServiceReturnHandle extends Handler {
+    public static class ServiceReturnHandle extends Handler {
     	
     	@Override
     	public void handleMessage(Message msg) {
@@ -420,7 +387,7 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     		Log.d(MobileMediaHelper.TAG, 
     				"retornou resultado SERVICE para Activity: " + msg.obj);
     		if (sucessoDownload) {
-    			novosArquivos = true;    			
+    			novosArquivos = true;
     		}
     			
     	}
