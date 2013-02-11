@@ -166,25 +166,29 @@ public class WifiManagerReceiver extends BroadcastReceiver {
 	 */
 	private synchronized boolean verificaRedeJaConfigurada(WifiManager wifiManager) {
 		boolean redeJaExiste = false;
-		for (WifiConfiguration r : wifiManager.getConfiguredNetworks()) {
-    		if (("\"" + ssid + "\"").equals(r.SSID)) {
-    			Log.d(TAG, "[verificaRedeJaConfigurada] A rede já existe.");
-    			if (WifiConfiguration.Status.CURRENT == r.status ||
-    					WifiConfiguration.Status.ENABLED == r.status) {
-    				// 0 - CURRENT  1 - DISABLED  2 - ENABLED
-    				Log.d(TAG, "[verificaRedeJaConfigurada] WifiConfiguration Status: " + r.status);
-    				//int id = r.networkId;    			
-    				//wifiManager.enableNetwork(id, true);
-        			Log.d(TAG, "[verificaRedeJaConfigurada] O SSID: " + ssid + " já está na lista de AP's gravadas.");
-    				
-    			} else { // se for DISABLED habilita rede
-    				int id = r.networkId;    			
-    				wifiManager.enableNetwork(id, true);
-    			}
-    			redeJaExiste = true;
-    			return redeJaExiste;
-    		}    		
-    	}
+		try {
+			for (WifiConfiguration r : wifiManager.getConfiguredNetworks()) {
+	    		if (("\"" + ssid + "\"").equals(r.SSID)) {
+	    			Log.d(TAG, "[verificaRedeJaConfigurada] A rede já existe.");
+	    			if (WifiConfiguration.Status.CURRENT == r.status ||
+	    					WifiConfiguration.Status.ENABLED == r.status) {
+	    				// 0 - CURRENT  1 - DISABLED  2 - ENABLED
+	    				Log.d(TAG, "[verificaRedeJaConfigurada] WifiConfiguration Status: " + r.status);
+	    				//int id = r.networkId;    			
+	    				//wifiManager.enableNetwork(id, true);
+	        			Log.d(TAG, "[verificaRedeJaConfigurada] O SSID: " + ssid + " já está na lista de AP's gravadas.");
+	    				
+	    			} else { // se for DISABLED habilita rede
+	    				int id = r.networkId;    			
+	    				wifiManager.enableNetwork(id, true);
+	    			}
+	    			redeJaExiste = true;
+	    			return redeJaExiste;
+	    		}    		
+	    	}
+		} catch (Exception e) {
+			Log.d(TAG, "[verificaRedeJaConfigurada] ERRO ao verificar a rede configurada ", e);
+		}
 		return redeJaExiste;
 		
 	}

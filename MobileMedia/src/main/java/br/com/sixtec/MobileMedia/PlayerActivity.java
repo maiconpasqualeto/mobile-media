@@ -30,6 +30,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+import android.view.View;
 import android.view.WindowManager;
 import android.widget.Toast;
 import br.com.sixtec.MobileMedia.facade.MobileFacade;
@@ -50,7 +51,7 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     private static final int ID_INTENT_CONFIG = 100;
     
     private MediaPlayer mp;
-    //private SurfaceView mPreview;
+    private SurfaceView sPreview;
     private SurfaceHolder holder;
     
     private List<String> arquivos;
@@ -67,9 +68,6 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     
     private MMConfiguracao conf = null;
     
-    /*private boolean pausado = false;
-    
-    private boolean surfaceCreated = false;*/
 
     /**
      * 
@@ -82,16 +80,19 @@ public class PlayerActivity extends Activity implements OnErrorListener,
         setContentView(R.layout.player_full);
         
         // guarda o serial do device
+        // linha para Android 2.x
+        //serial = Settings.Secure.getString(getApplicationContext().getContentResolver(),
+        //        Settings.System.ANDROID_ID);
         serial = Settings.Secure.getString(getApplicationContext().getContentResolver(),
-                Settings.System.ANDROID_ID);
+        		Settings.Secure.ANDROID_ID);
         
         Log.v(MobileMediaHelper.TAG, "Device Serial: " + serial);
                 
-        SurfaceView sPreview = (SurfaceView) findViewById(R.id.newSurface);
+        sPreview = (SurfaceView) findViewById(R.id.newSurface);
         criaSurfaceEMediaPlayer(sPreview);
-        
+        //sPreview.setSystemUiVisibility(View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_LOW_PROFILE);
         // android 4
-        //getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LOW_PROFILE);
+        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LOW_PROFILE | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
         
         atualizarListaArquivos();
         
@@ -115,7 +116,8 @@ public class PlayerActivity extends Activity implements OnErrorListener,
 		holder = sPreview.getHolder();
         holder.addCallback(this);
         // Não tirar essa linha, resolve o problema do erro (1, -38)
-        holder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
+        // no android 2.x
+        //holder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
         
         // Create a new media player and set the listeners
         mp = new MediaPlayer();
@@ -210,7 +212,7 @@ public class PlayerActivity extends Activity implements OnErrorListener,
         	defineArquivoParaExecucao(mp);
         	prepareToPlay();
         }
-        
+        sPreview.setSystemUiVisibility(View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
     }
 
     public void surfaceChanged(SurfaceHolder surfaceholder, int i, int j, int k) {
@@ -361,10 +363,16 @@ public class PlayerActivity extends Activity implements OnErrorListener,
 			}
 		};
 		File midiasDir = new File(MobileMediaHelper.DIRETORIO_MIDIAS);
-		arquivos = Arrays.asList(midiasDir.list(fileFilter));
+		String[] fileNames = midiasDir.list(fileFilter);		
+		if (fileNames == null){
+			Log.e(TAG, "O cartão SD não está montado");
+			return;
+		}
+		arquivos = Arrays.asList(fileNames);
 		if (arquivos.isEmpty()){
 			Log.e(TAG, "Não existem midias para execução");
 			// TODO [Maicon] - criar um playlist padrao.
+			return;
 		}
 		
     	for (String nomeArq : arquivos)
