@@ -142,7 +142,7 @@ public class WifiManagerReceiver extends BroadcastReceiver {
 		Intent it = new Intent(ctx, AlarmDownloadReceiver.class);
 		it.putExtra("messenger", messenger);
 		it.putExtra("serial", serial);
-		it.putExtra("identificar", identificador);
+		it.putExtra("identificador", identificador);
 
 		piDownload = PendingIntent.getBroadcast(
 				ctx, AlarmDownloadReceiver.ALARM_RECEIVER_REQUEST_CODE, 

@@ -345,11 +345,11 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     		
     		if (!ssidOld.equals(ssid) ||
     				!senhaOld.equals(senha)) {
-    			receiver.atualizaConfiguracaoRede(this, ssid, senha);
     			
-    		}
-    		
+    			receiver.atualizaConfiguracaoRede(this, ssid, senha);
+    		}    		
     	}
+    	getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LOW_PROFILE | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
     }
     
     private void atualizarListaArquivos() {
