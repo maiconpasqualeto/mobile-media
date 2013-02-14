@@ -5,22 +5,21 @@ package br.com.sixtec.MobileMedia.receivers;
 
 import java.util.List;
 
-import br.com.sixtec.MobileMedia.utils.MobileMediaHelper;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.net.NetworkInfo.DetailedState;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiConfiguration;
-import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.text.format.Formatter;
 import android.util.Log;
+import br.com.sixtec.MobileMedia.utils.MobileMediaHelper;
 
 /**
  * @author maicon
  *
  */
+@Deprecated
 public class WifiReceiver extends BroadcastReceiver {
 	
 	private static String TAG = "MobileMedia";
@@ -249,12 +248,12 @@ public class WifiReceiver extends BroadcastReceiver {
     	}
 	}
 
-	private void desconectarWifi() {
+	/*private void desconectarWifi() {
 		if (wifi != null) {
 			wifi.disconnect();
 			wifi.setWifiEnabled(false);
 		}
-	}
+	}*/
 	
 	private WifiConfiguration configuraRedeWifi(WifiConfiguration wc, String pass, WifiType wifiType) {
 		Log.d(TAG, "[configuraRedeWifi] Configurando rede : " + wifiType.name());

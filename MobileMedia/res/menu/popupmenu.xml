@@ -1,0 +1,14 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+
+    <group android:id="@+mpopup/group_popupmenu" >
+        <item
+            android:id="@+mpopup/configurar"
+            android:title="Configurar">
+        </item>
+        <item
+            android:id="@+mpopup/sair"
+            android:title="Sair">
+        </item>
+    </group>
+
+</menu>

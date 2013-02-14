@@ -10,7 +10,9 @@ import java.util.Arrays;
 import java.util.List;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.PixelFormat;
@@ -46,7 +48,7 @@ public class PlayerActivity extends Activity implements OnErrorListener,
         OnBufferingUpdateListener, OnCompletionListener,
         MediaPlayer.OnPreparedListener, SurfaceHolder.Callback {
 	
-    private static final String TAG = "MobileMedia";
+    private static final String TAG = MobileMediaHelper.TAG;
     
     private static final int ID_INTENT_CONFIG = 100;
     
@@ -75,7 +77,8 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     public void onCreate(Bundle bundle) {
         super.onCreate(bundle);
         
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, 
+        		WindowManager.LayoutParams.FLAG_FULLSCREEN);
         
         setContentView(R.layout.player_full);
         
@@ -90,19 +93,24 @@ public class PlayerActivity extends Activity implements OnErrorListener,
                 
         sPreview = (SurfaceView) findViewById(R.id.newSurface);
         criaSurfaceEMediaPlayer(sPreview);
-        //sPreview.setSystemUiVisibility(View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_LOW_PROFILE);
+        sPreview.setOnLongClickListener(new View.OnLongClickListener() {
+			@Override
+			public boolean onLongClick(View view) {
+				//Log.d(TAG, "[onTouchEvent] Long event pressed");
+				openOptionsMenu();
+				return false;
+			}
+		});
+        
         // android 4
-        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LOW_PROFILE | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
+        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LOW_PROFILE | 
+        		View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
         
         atualizarListaArquivos();
         
         atualizaConfigRede();
     	
-    	//defineArquivoParaExecucao(mp);
-        
         receivers();
-        
-        //registraServicoDownload();
         
     }
     	
@@ -213,6 +221,7 @@ public class PlayerActivity extends Activity implements OnErrorListener,
         	prepareToPlay();
         }
         sPreview.setSystemUiVisibility(View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
+        sPreview.requestFocus();
     }
 
     public void surfaceChanged(SurfaceHolder surfaceholder, int i, int j, int k) {
@@ -250,7 +259,9 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     @Override
     protected void onPause() {
     	super.onPause();
-    	Log.e(TAG, "On Pause called");    	
+    	Log.e(TAG, "On Pause called");
+
+    	mp.pause();
     }
     
     /* (non-Javadoc)
@@ -265,10 +276,10 @@ public class PlayerActivity extends Activity implements OnErrorListener,
 			unregisterReceiver(receiver);
 			receiverRegistrado = false;
 		}
-    	if (mp.isPlaying()) {
+    	//if (mp.isPlaying()) {
     		mp.stop();
     		mp.reset();    		
-    	}
+    	//}
     }
     
     @Override
@@ -314,17 +325,48 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     // métodos da Activity
     
     @Override
+    public void onOptionsMenuClosed(Menu menu) {
+    	getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LOW_PROFILE | 
+    			View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
+    }
+    
+    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
     	menu.add(Menu.NONE, 0, Menu.NONE, "Configurar");
-    	    	
+    	menu.add(Menu.NONE, 1, Menu.NONE, "Android Settings");
+    	menu.add(Menu.NONE, 2, Menu.NONE, "Sair");
     	return true;
     }
     
     @Override
     public boolean onMenuItemSelected(int featureId, MenuItem item) {
-    	if (item.getItemId() == 0) {
+    	if (item.getItemId() == 0) { // configurar
     		startActivityForResult(new Intent(this, ConfigActivity.class), ID_INTENT_CONFIG);
-    	}
+    	} else 
+    		if (item.getItemId() == 1) { // Android Settings
+    		Intent it = new Intent(Settings.ACTION_SETTINGS);
+    		startActivity(it);
+    	} else
+    		if (item.getItemId() == 2) { // Sair
+    			// confirmação de saída
+    			AlertDialog.Builder alert = new AlertDialog.Builder(this);
+    			alert.setTitle("Confirmação");
+    			alert.setMessage("Deseja realmente sair do aplicativo?");
+    			alert.setPositiveButton("Sim", new DialogInterface.OnClickListener() {
+    				@Override
+    				public void onClick(DialogInterface dialog, int which) {
+    					finish();
+    				}
+    			});
+    			alert.setNegativeButton("Não", new DialogInterface.OnClickListener() {
+    				@Override
+    				public void onClick(DialogInterface dialog, int which) {
+    					// não faz nada
+    				}
+    			});
+    			alert.setCancelable(false);
+    			alert.show();
+        	}
     	return true;
     }
     
@@ -349,7 +391,8 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     			receiver.atualizaConfiguracaoRede(this, ssid, senha);
     		}    		
     	}
-    	getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LOW_PROFILE | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
+    	getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LOW_PROFILE | 
+    			View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
     }
     
     private void atualizarListaArquivos() {
