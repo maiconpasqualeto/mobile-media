@@ -38,6 +38,7 @@ import android.widget.Toast;
 import br.com.sixtec.MobileMedia.facade.MobileFacade;
 import br.com.sixtec.MobileMedia.persistencia.MMConfiguracao;
 import br.com.sixtec.MobileMedia.persistencia.MobileMediaDAO;
+import br.com.sixtec.MobileMedia.receivers.SimpleWifiReceiver;
 import br.com.sixtec.MobileMedia.receivers.WifiManagerReceiver;
 import br.com.sixtec.MobileMedia.utils.MobileMediaHelper;
 /**
@@ -60,7 +61,7 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     private int indexArquivo = -1; 
     
     // wifi
-    private WifiManagerReceiver receiver;
+    private SimpleWifiReceiver receiver;
     
     private boolean receiverRegistrado = false;
         
@@ -306,7 +307,8 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     	try {
 			WifiManager wifi = (WifiManager) getSystemService(Context.WIFI_SERVICE);
 			//receiver = new WifiReceiver(wifi, conf.getSsid(), conf.getPass());
-			receiver = new WifiManagerReceiver(this, wifi, conf.getSsid(), conf.getPass(), serial, conf.getIdentificador());
+			//receiver = new WifiManagerReceiver(this, wifi, conf.getSsid(), conf.getPass(), serial, conf.getIdentificador());
+			receiver = new SimpleWifiReceiver(this, wifi, serial, conf.getIdentificador());
     	} catch (InterruptedException e) {
     		Log.e(MobileMediaHelper.TAG, "Erro de interrupção ao ligar o wifi", e);
     		Toast.makeText(this, "Erro de interrupção ao ligar o wifi", Toast.LENGTH_LONG)
@@ -370,7 +372,7 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     	return true;
     }
     
-    @Override
+    /*@Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
     	if (requestCode == ID_INTENT_CONFIG &&
     			resultCode == RESULT_OK){
@@ -393,6 +395,17 @@ public class PlayerActivity extends Activity implements OnErrorListener,
     	}
     	getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LOW_PROFILE | 
     			View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
+    }*/
+    
+    /* (non-Javadoc)
+     * @see android.app.Activity#onActivityResult(int, int, android.content.Intent)
+     */
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+    	if (requestCode == ID_INTENT_CONFIG &&
+    			resultCode == RESULT_OK){
+    		atualizaConfigRede();
+    	}
     }
     
     private void atualizarListaArquivos() {

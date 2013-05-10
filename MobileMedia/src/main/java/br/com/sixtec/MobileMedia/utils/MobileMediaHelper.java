@@ -35,13 +35,16 @@ public class MobileMediaHelper {
 	public static final DateFormat JSON_DATE_FORMAT = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault());
 	
 	public static byte[] toByteArray(InputStream is) throws IOException {
-		byte[] bytes = new byte[1024];
+		byte[] buff = new byte[4096];
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		int lidos;
-		while ((lidos = is.read(bytes)) > 0) {
-			baos.write(bytes, 0, lidos);
+		while ((lidos = is.read(buff)) > -1) {
+			baos.write(buff, 0, lidos);
 		}
-		return baos.toByteArray();
+		baos.flush();
+        byte[] bytes = baos.toByteArray();
+        baos.close();
+		return bytes;
 	}
 	
 	public static void moveFile(File arquivo, File diretorioDestino){
@@ -57,10 +60,10 @@ public class MobileMediaHelper {
 		try {
 			fis = new FileInputStream(arquivo);			
 			ByteArrayOutputStream baos = new ByteArrayOutputStream();
-			byte[] buf = new byte[1024];
+			byte[] buf = new byte[4096];
 			int len = fis.read(buf);
 			while (len > -1){
-				baos.write(buf);
+				baos.write(buf, 0, len);
 				len = fis.read(buf);
 			}
 			baos.flush();

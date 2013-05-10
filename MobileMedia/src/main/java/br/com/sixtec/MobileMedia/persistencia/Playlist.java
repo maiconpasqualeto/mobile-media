@@ -39,7 +39,9 @@ public class Playlist {
 		try {
 			id = obj.getLong("id");
 			descricao = obj.getString("descricao");
-			dataHoraCriacao = MobileMediaHelper.JSON_DATE_FORMAT.parse(obj.getString("dataHoraCriacao"));
+			String strDataHoraCriacao = obj.getString("dataHoraCriacao");
+			if (!"".equals(strDataHoraCriacao))
+				dataHoraCriacao = MobileMediaHelper.JSON_DATE_FORMAT.parse(strDataHoraCriacao);
 			
 		} catch (JSONException e){
 			Log.e(MobileMediaHelper.TAG, "Erro no parse do Json - Playlist", e);
